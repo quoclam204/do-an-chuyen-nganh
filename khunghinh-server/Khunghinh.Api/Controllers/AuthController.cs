@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 
 namespace Khunghinh.Api.Controllers
 {
@@ -13,11 +12,11 @@ namespace Khunghinh.Api.Controllers
 
         public AuthController(IConfiguration cfg)
         {
-            // cấu hình trong appsettings: "FrontendOrigin": "http://localhost:5173"
+            // Ví dụ: dev = http://localhost:5173, prod = https://trendyframe.me
             _spaOrigin = cfg["FrontendOrigin"] ?? "http://localhost:5173";
         }
 
-        // Bước 1: mở Google OAuth (popup gọi endpoint này)
+        // B1: mở Google OAuth (popup gọi endpoint này)
         [HttpGet("google")]
         public IActionResult Google()
         {
@@ -25,22 +24,26 @@ namespace Khunghinh.Api.Controllers
             {
                 RedirectUri = Url.Content("~/api/auth/callback")
             };
-            return Challenge(props, "Google"); // hoặc GoogleDefaults.AuthenticationScheme
+            return Challenge(props, "Google");
         }
 
-        // Bước 2: Google redirect về đây -> đóng popup & báo cho SPA
-        [Authorize]
+        // B2: Google redirect về đây -> đóng popup & báo cho SPA
+        [Authorize] // giữ Authorize để đảm bảo đã sign-in
         [HttpGet("callback")]
         public ContentResult Callback()
         {
-            const string spa = "http://localhost:5173";
+            // Dùng _spaOrigin từ cấu hình, không hardcode
             return Content($@"<!doctype html><script>
-      try{{ window.opener && window.opener.postMessage('auth:success','{spa}'); }}catch(e){{}}
-      window.close();
-    </script>", "text/html");
+try {{
+  if (window.opener) {{
+    window.opener.postMessage('auth:success','{_spaOrigin}');
+  }}
+}} catch(e) {{}}
+window.close();
+</script>", "text/html");
         }
 
-        // Bước 3: SPA gọi để lấy thông tin user
+        // B3: SPA gọi để lấy thông tin user
         [Authorize]
         [HttpGet("me")]
         public IActionResult Me()
@@ -58,7 +61,7 @@ namespace Khunghinh.Api.Controllers
             });
         }
 
-        // Bước 4: đăng xuất
+        // B4: Đăng xuất
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
         {
