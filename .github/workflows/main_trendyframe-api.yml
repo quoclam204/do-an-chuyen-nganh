@@ -5,8 +5,12 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:          # 👈 phải để ở root để bật OIDC
+  id-token: write
+  contents: read
+
 env:
-  AZURE_WEBAPP_NAME: trendyframe-api
+  AZURE_WEBAPP_NAME: trendyframe-api          # Tên App Service
   DOTNET_VERSION: '8.0.x'
   PROJECT_PATH: khunghinh-server/Khunghinh.Api/Khunghinh.Api.csproj
 
@@ -14,10 +18,11 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source code
+        uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -39,16 +44,14 @@ jobs:
   deploy:
     runs-on: windows-latest
     needs: build
-    permissions:
-      id-token: write
-      contents: read
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download artifact
+        uses: actions/download-artifact@v4
         with:
           name: published
           path: published
 
-      - name: Azure Login
+      - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -60,4 +63,3 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: published
-
