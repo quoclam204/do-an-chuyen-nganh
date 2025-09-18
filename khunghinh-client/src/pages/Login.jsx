@@ -3,74 +3,64 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 
-const BACKEND_ORIGIN = 'https://localhost:7090' // đổi khi deploy
+// 🔑 Lấy API / SPA origin từ env (local hoặc deploy)
+const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
+const SPA_ORIGIN = (import.meta.env.VITE_SPA_ORIGIN || window.location.origin).replace(/\/$/, '')
 
 export default function Login() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [me, setMe] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('kh_me') || 'null')
-    } catch {
-      return null
-    }
+    try { return JSON.parse(localStorage.getItem('kh_me') || 'null') } catch { return null }
   })
 
   const popupRef = useRef(null)
   const closeTimerRef = useRef(null)
 
-  // nhận tín hiệu từ popup
-  // src/pages/Login.jsx
-  const BACKEND_ORIGIN = 'https://localhost:7090'; // API phải là HTTPS 7090
-
+  // Lắng nghe tín hiệu từ popup (AuthController callback)
   useEffect(() => {
     const onMsg = async (e) => {
-      console.log('message from', e.origin, e.data); // để debug
-      // ✅ Message phải đến từ API (trang /api/auth/callback)
-      if (e.origin !== BACKEND_ORIGIN) return;
+      console.log('message from', e.origin, e.data)
 
-      if (e.data === 'auth:success') {
-        try {
-          const res = await fetch(`${BACKEND_ORIGIN}/api/auth/me`, {
-            credentials: 'include',       // bắt buộc để gửi cookie
-          });
-          if (res.ok) {
-            const user = await res.json();
-            localStorage.setItem('kh_me', JSON.stringify(user));
-            setMe(user);
-            window.dispatchEvent(new Event('kh_me_changed'));
-            closeModal();
-          }
-        } finally {
-          setLoading(false);
-          if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
-          popupRef.current = null;
-          if (closeTimerRef.current) { clearInterval(closeTimerRef.current); closeTimerRef.current = null; }
+      if (e.origin !== new URL(BACKEND_ORIGIN).origin) return
+      if (e.data !== 'auth:success') return
+
+      try {
+        const res = await fetch(`${BACKEND_ORIGIN}/api/auth/me`, {
+          credentials: 'include',
+        })
+        if (res.ok) {
+          const user = await res.json()
+          localStorage.setItem('kh_me', JSON.stringify(user))
+          setMe(user)
+          window.dispatchEvent(new Event('kh_me_changed'))
+          closeModal()
         }
+      } finally {
+        setLoading(false)
+        if (popupRef.current && !popupRef.current.closed) popupRef.current.close()
+        popupRef.current = null
+        if (closeTimerRef.current) { clearInterval(closeTimerRef.current); closeTimerRef.current = null }
       }
-    };
+    }
 
-    window.addEventListener('message', onMsg);
-    document.body.style.overflow = 'hidden';
+    window.addEventListener('message', onMsg)
+    document.body.style.overflow = 'hidden'
     return () => {
-      window.removeEventListener('message', onMsg);
-      document.body.style.overflow = 'auto';
-      if (closeTimerRef.current) clearInterval(closeTimerRef.current);
-    };
-  }, []);
-
-
+      window.removeEventListener('message', onMsg)
+      document.body.style.overflow = 'auto'
+      if (closeTimerRef.current) clearInterval(closeTimerRef.current)
+    }
+  }, [])
 
   const closeModal = () => {
     if (window.history.length > 1) navigate(-1)
     else navigate('/')
   }
 
-  // đóng khi bấm ESC
+  // Đóng modal khi bấm ESC
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === 'Escape') closeModal()
-    }
+    const onKey = (e) => { if (e.key === 'Escape') closeModal() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
@@ -82,11 +72,7 @@ export default function Login() {
     const x = window.top.outerWidth / 2 + window.top.screenX - w / 2
 
     const url = `${BACKEND_ORIGIN}/api/auth/google`
-    popupRef.current = window.open(
-      url,
-      'google_oauth',
-      `width=${w},height=${h},left=${x},top=${y}`
-    )
+    popupRef.current = window.open(url, 'google_oauth', `width=${w},height=${h},left=${x},top=${y}`)
 
     if (!popupRef.current || popupRef.current.closed) {
       window.location.href = url
@@ -103,14 +89,13 @@ export default function Login() {
   }
 
   const logout = async () => {
-    // ✅ gọi thẳng backend để xoá cookie đúng site
     await fetch(`${BACKEND_ORIGIN}/api/auth/logout`, {
       method: 'POST',
       credentials: 'include',
     })
     localStorage.removeItem('kh_me')
     setMe(null)
-    window.dispatchEvent(new Event('kh_me_changed')) // 👈 báo cho Navbar
+    window.dispatchEvent(new Event('kh_me_changed'))
     closeModal()
   }
 
