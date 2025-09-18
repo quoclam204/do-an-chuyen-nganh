@@ -1,0 +1,53 @@
+name: Build and deploy ASP.NET Core app to Azure Web App - trendyframe-api
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: trendyframe-api
+  DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH: khunghinh-server/Khunghinh.Api/Khunghinh.Api.csproj
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: Build
+        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -o ${{ github.workspace }}/published --no-restore
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: published
+          path: ${{ github.workspace }}/published
+
+  deploy:
+    runs-on: windows-latest
+    needs: build
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: published
+          path: published
+
+      - name: Deploy to Azure Web App (Publish Profile)
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: published
