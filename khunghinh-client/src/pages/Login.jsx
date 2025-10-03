@@ -9,7 +9,7 @@ const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:70
 const SPA_ORIGIN = (import.meta.env.VITE_SPA_ORIGIN || window.location.origin).replace(/\/$/, '')
 
 // Component Login hiển thị modal đăng nhập
-export default function Login() {
+export default function Login({ onClose }) {
   const navigate = useNavigate()
 
   // state: loading khi mở popup, me = thông tin user (lấy từ localStorage)
@@ -60,10 +60,14 @@ export default function Login() {
     }
   }, [])
 
-  // Hàm đóng modal: nếu có lịch sử thì quay lại, không thì về /
+  // Hàm đóng modal: nếu có onClose thì dùng nó, không thì navigate
   const closeModal = () => {
-    if (window.history.length > 1) navigate(-1)
-    else navigate('/')
+    if (onClose) {
+      onClose()
+    } else {
+      if (window.history.length > 1) navigate(-1)
+      else navigate('/')
+    }
   }
 
   // Đóng modal khi bấm ESC

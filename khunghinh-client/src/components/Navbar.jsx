@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X, ChevronDown, User, Image, LogOut } from 'lucide-react'
+import Login from '../pages/Login'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [me, setMe] = useState(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
   const dropdownRef = useRef(null)
   const location = useLocation()
   const navigate = useNavigate()
@@ -105,12 +107,12 @@ export default function Navbar() {
             <NavLink to="/editor" className="hover:text-blue-600 transition">Tạo khung</NavLink>
 
             {!me ? (
-              <NavLink
-                to="/login"
+              <button
+                onClick={() => setLoginModalOpen(true)}
                 className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition"
               >
                 Đăng nhập
-              </NavLink>
+              </button>
             ) : (
               <div className="relative" ref={dropdownRef}>
                 <button
@@ -142,7 +144,7 @@ export default function Navbar() {
                     {/* Menu Items */}
                     <div className="px-4 py-2 border-b border-gray-100">
                       <div className="font-medium text-gray-900">{name}</div>
-                      <div className="text-sm text-gray-500">{me?.email}</div>
+                      {/* <div className="text-sm text-gray-500">{me?.email}</div> */}
                     </div>
 
                     <Link
@@ -199,13 +201,15 @@ export default function Navbar() {
             <NavLink onClick={() => setOpen(false)} to="/editor" className="block text-gray-800">Tạo khung</NavLink>
 
             {!me ? (
-              <NavLink
-                onClick={() => setOpen(false)}
-                to="/login"
+              <button
+                onClick={() => {
+                  setOpen(false)
+                  setLoginModalOpen(true)
+                }}
                 className="bg-blue-600 text-white px-5 py-2 rounded-lg inline-block"
               >
                 Đăng nhập
-              </NavLink>
+              </button>
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
@@ -257,6 +261,11 @@ export default function Navbar() {
       </header>
 
       <div className="h-[64px]" />
+
+      {/* Login Modal */}
+      {loginModalOpen && (
+        <Login onClose={() => setLoginModalOpen(false)} />
+      )}
     </>
   )
 }
