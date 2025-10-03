@@ -58,7 +58,7 @@ window.close();
                 name = User.Identity?.Name,
                 email = User.Claims.FirstOrDefault(c => c.Type.Contains("email"))?.Value,
                 picture
-            });
+            }); 
         }
 
         // B4: Đăng xuất

@@ -1,0 +1,32 @@
+Install-Package Microsoft.EntityFrameworkCore.SqlServer
+Install-Package Microsoft.EntityFrameworkCore.Design
+Install-Package Microsoft.EntityFrameworkCore.Tools
+Install-Package Swashbuckle.AspNetCore
+Install-Package Microsoft.AspNetCore.Authentication.Cookies (Install-Package Microsoft.AspNetCore.Authentication.Cookies -Version 8.0.16)
+Install-Package Microsoft.AspNetCore.Authentication.Google (Install-Package Microsoft.AspNetCore.Authentication.Google -Version 8.0.16) *
+Install-Package Google.Apis.Auth
+Install-Package UAParser
+Install-Package QRCoder
+
+dotnet tool install --global dotnet-ef
+dotnet ef dbcontext scaffold "Name=Default" Microsoft.EntityFrameworkCore.SqlServer \
+  --context KhunghinhContext --output-dir Data/Entities \
+  --no-onconfiguring --use-database-names
+
+
+dotnet dev-certs https --trust
+dotnet run --urls "https://localhost:7090;http://localhost:5212"
+
+"client_id":"593689957026-ofvfm0juctm8893soqoma3vbq7a28ett.apps.googleusercontent.com"
+"client_secret":"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"
+
+dotnet user-secrets init
+dotnet user-secrets set "Auth:Google:ClientId" "593689957026-ofvfm0juctm8893soqoma3vbq7a28ett.apps.googleusercontent.com"
+dotnet user-secrets set "Auth:Google:ClientSecret" "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"
+Kiểm tra lại đã lưu chưa: dotnet user-secrets list	
+
+dotnet user-secrets set "Auth:Google:ClientId" "593689957026-ofvfm0juctm8893soqoma3vbq7a28ett.apps.googleusercontent.com"
+dotnet user-secrets set "Auth:Google:ClientSecret" "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"
+
+Deploy SQL (Azure SQL Database)
+

@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, ChevronDown, User, Image, LogOut } from 'lucide-react'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [me, setMe] = useState(null)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef(null)
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -37,13 +39,27 @@ export default function Navbar() {
   }, [])
 
   // đóng menu khi đổi route
-  useEffect(() => { setOpen(false) }, [location.pathname])
+  useEffect(() => {
+    setOpen(false)
+    setDropdownOpen(false)
+  }, [location.pathname])
 
   // khóa cuộn khi mở menu
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [open])
+
+  // đóng dropdown khi click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // auto đóng khi resize lên desktop
   useEffect(() => {
@@ -56,6 +72,7 @@ export default function Navbar() {
     localStorage.removeItem('kh_me')
     window.dispatchEvent(new Event('kh_me_changed')) // báo các component khác
     setMe(null)
+    setDropdownOpen(false)
     navigate('/')
   }
 
@@ -95,23 +112,66 @@ export default function Navbar() {
                 Đăng nhập
               </NavLink>
             ) : (
-              <div className="flex items-center gap-3">
-                <img
-                  src={avatarUrl}
-                  alt="avatar"
-                  className="w-10 h-10 rounded-full border object-cover"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null
-                    e.currentTarget.src = '/frames/icon/default-avatar.png' // đảm bảo file này tồn tại trong /public
-                  }}
-                />
+              <div className="relative" ref={dropdownRef}>
                 <button
-                  onClick={handleLogout}
-                  className="text-sm text-gray-600 hover:text-red-600"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100/50 transition"
                 >
-                  Đăng xuất
+                  <img
+                    src={avatarUrl}
+                    alt="avatar"
+                    className="w-10 h-10 rounded-full border object-cover"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null
+                      e.currentTarget.src = '/frames/icon/default-avatar.png'
+                    }}
+                  />
+                  <ChevronDown
+                    size={16}
+                    className={`text-gray-600 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
+                  />
                 </button>
+
+                {/* Dropdown Menu */}
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                    {/* Tam giác nhỏ */}
+                    <div className="absolute -top-2 right-4 w-4 h-4 bg-white border-l border-t border-gray-200 rotate-45"></div>
+
+                    {/* Menu Items */}
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <div className="font-medium text-gray-900">{name}</div>
+                      <div className="text-sm text-gray-500">{me?.email}</div>
+                    </div>
+
+                    <Link
+                      to="/profile"
+                      className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      <User size={16} />
+                      <span>Tài khoản</span>
+                    </Link>
+
+                    <Link
+                      to="/my-frames"
+                      className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      <Image size={16} />
+                      <span>Khung hình</span>
+                    </Link>
+
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition w-full text-left"
+                    >
+                      <LogOut size={16} />
+                      <span>Đăng xuất</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -147,22 +207,48 @@ export default function Navbar() {
                 Đăng nhập
               </NavLink>
             ) : (
-              <div className="flex items-center gap-3">
-                <img
-                  src={avatarUrl}
-                  alt="avatar"
-                  className="w-10 h-10 rounded-full border object-cover"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null
-                    e.currentTarget.src = '/frames/icon/default-avatar.png'
-                  }}
-                />
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
+                  <img
+                    src={avatarUrl}
+                    alt="avatar"
+                    className="w-10 h-10 rounded-full border object-cover"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null
+                      e.currentTarget.src = '/frames/icon/default-avatar.png'
+                    }}
+                  />
+                  <div>
+                    <div className="font-medium text-gray-900">{name}</div>
+                    <div className="text-sm text-gray-500">{me?.email}</div>
+                  </div>
+                </div>
+
+                <Link
+                  to="/profile"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 text-gray-700 py-2"
+                >
+                  <User size={16} />
+                  <span>Tài khoản</span>
+                </Link>
+
+                <Link
+                  to="/my-frames"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 text-gray-700 py-2"
+                >
+                  <Image size={16} />
+                  <span>Khung hình</span>
+                </Link>
+
                 <button
                   onClick={handleLogout}
-                  className="text-sm text-gray-600 hover:text-red-600"
+                  className="flex items-center gap-3 text-red-600 py-2"
                 >
-                  Đăng xuất
+                  <LogOut size={16} />
+                  <span>Đăng xuất</span>
                 </button>
               </div>
             )}

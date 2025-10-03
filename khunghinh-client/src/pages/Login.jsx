@@ -3,17 +3,22 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 
-// 🔑 Lấy API / SPA origin từ env (local hoặc deploy)
+// Lấy domain API / SPA origin từ env (local hoặc deploy)
+// Tự chọn giá trị để chạy được cho cả local và deploy.
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 const SPA_ORIGIN = (import.meta.env.VITE_SPA_ORIGIN || window.location.origin).replace(/\/$/, '')
 
+// Component Login hiển thị modal đăng nhập
 export default function Login() {
   const navigate = useNavigate()
+
+  // state: loading khi mở popup, me = thông tin user (lấy từ localStorage)
   const [loading, setLoading] = useState(false)
   const [me, setMe] = useState(() => {
     try { return JSON.parse(localStorage.getItem('kh_me') || 'null') } catch { return null }
   })
 
+  // ref: popupRef giữ cửa sổ popup Google, closeTimerRef để check popup đóng
   const popupRef = useRef(null)
   const closeTimerRef = useRef(null)
 
@@ -22,19 +27,21 @@ export default function Login() {
     const onMsg = async (e) => {
       console.log('message from', e.origin, e.data)
 
+      // chỉ xử lý nếu message gửi từ backend và nội dung = "auth:success"
       if (e.origin !== new URL(BACKEND_ORIGIN).origin) return
       if (e.data !== 'auth:success') return
 
       try {
+        // gọi API /api/auth/me để lấy thông tin user
         const res = await fetch(`${BACKEND_ORIGIN}/api/auth/me`, {
           credentials: 'include',
         })
         if (res.ok) {
           const user = await res.json()
-          localStorage.setItem('kh_me', JSON.stringify(user))
-          setMe(user)
-          window.dispatchEvent(new Event('kh_me_changed'))
-          closeModal()
+          localStorage.setItem('kh_me', JSON.stringify(user)) // lưu user
+          setMe(user)             // cập nhật state               
+          window.dispatchEvent(new Event('kh_me_changed'))  // thông báo user đã thay đổi
+          closeModal()         // đóng modal
         }
       } finally {
         setLoading(false)
@@ -53,6 +60,7 @@ export default function Login() {
     }
   }, [])
 
+  // Hàm đóng modal: nếu có lịch sử thì quay lại, không thì về /
   const closeModal = () => {
     if (window.history.length > 1) navigate(-1)
     else navigate('/')
@@ -65,6 +73,7 @@ export default function Login() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Mở popup Google OAuth
   const openGooglePopup = () => {
     setLoading(true)
     const w = 520, h = 620
@@ -88,6 +97,7 @@ export default function Login() {
     }, 500)
   }
 
+  // Hàm logout: gọi API /api/auth/logout, xóa user, đóng modal
   const logout = async () => {
     await fetch(`${BACKEND_ORIGIN}/api/auth/logout`, {
       method: 'POST',
@@ -99,6 +109,7 @@ export default function Login() {
     closeModal()
   }
 
+  // Render modal
   return (
     <div className="fixed inset-0 z-[100]">
       <div
