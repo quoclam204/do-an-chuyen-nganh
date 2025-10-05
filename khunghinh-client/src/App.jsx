@@ -7,6 +7,7 @@ import Tools from './pages/Tools.jsx'
 import Trending from './pages/Trending.jsx'
 import Editor from './pages/Editor.jsx'
 import Login from './pages/Login.jsx'
+import Admin from './pages/Admin.jsx'
 import Compress from './pages/Compress.jsx'
 import Resize from './pages/Resize.jsx'           // ✅ thêm trang Resize
 import ImageToPdf from './pages/ImageToPdf.jsx'
@@ -26,9 +27,10 @@ export default function App() {
             <Route path="/trending" element={<Trending />} />
             <Route path="/editor" element={<Editor />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="/compress" element={<Compress />} />
-            <Route path="/resize" element={<Resize />} />   {/* ✅ route mới */}\
-            <Route path="/image-to-pdf" element={<ImageToPdf />} /> 
+            <Route path="/resize" element={<Resize />} />
+            <Route path="/image-to-pdf" element={<ImageToPdf />} />
             <Route path="/:alias" element={<Editor />} />   {/* để cuối để không “ăn” /resize */}
           </Routes>
         </main>

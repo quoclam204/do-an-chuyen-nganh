@@ -46,6 +46,19 @@ export default function Navbar() {
     setDropdownOpen(false)
   }, [location.pathname])
 
+
+  // 🔍 DEBUG 1: Kiểm tra dữ liệu user mỗi khi thay đổi
+  useEffect(() => {
+    console.log('=== DEBUG USER DATA ===')
+    console.log('localStorage:', JSON.parse(localStorage.getItem('kh_me')))
+    console.log('me state:', me)
+    console.log('vaiTro:', me?.vaiTro)
+    console.log('email:', me?.email)
+
+    const isAdmin = me?.vaiTro === "admin" // ✅ Dựa trên database
+    console.log('isAdmin:', isAdmin)
+  }, [me])
+
   // khóa cuộn khi mở menu
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
@@ -79,6 +92,11 @@ export default function Navbar() {
   }
 
   const name = me?.name || 'User'
+
+  // ✅ Logic phân quyền dựa trên database
+  const isAdmin = me?.vaiTro === "admin"
+  const isLoggedIn = !!me
+
   const avatarUrl =
     me?.picture ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff&size=96`
@@ -102,10 +120,23 @@ export default function Navbar() {
 
           {/* Menu Desktop */}
           <div className="hidden md:flex items-center gap-8 text-gray-800 font-medium">
+            {/* Luôn hiện */}
             <NavLink to="/tools" className="hover:text-blue-600 transition">Công cụ</NavLink>
             <NavLink to="/trending" className="hover:text-blue-600 transition">Xu hướng</NavLink>
-            <NavLink to="/editor" className="hover:text-blue-600 transition">Tạo khung</NavLink>
 
+            {/* Chỉ hiện khi đã đăng nhập */}
+            {me && (
+              <NavLink to="/editor" className="hover:text-blue-600 transition">Tạo khung</NavLink>
+            )}
+
+            {/* Chỉ hiện khi là admin */}
+            {isAdmin && (
+              <NavLink to="/admin" className="hover:text-blue-600 transition text-purple-600 font-medium">
+                Quản trị
+              </NavLink>
+            )}
+
+            {/* Nút đăng nhập hoặc dropdown user */}
             {!me ? (
               <button
                 onClick={() => setLoginModalOpen(true)}
@@ -121,7 +152,7 @@ export default function Navbar() {
                 >
                   <img
                     src={avatarUrl}
-                    alt="avatar"
+                    alt={`Avatar của ${name}`}
                     className="w-10 h-10 rounded-full border object-cover"
                     referrerPolicy="no-referrer"
                     onError={(e) => {
@@ -178,6 +209,7 @@ export default function Navbar() {
             )}
           </div>
 
+
           {/* Nút mobile */}
           <button
             className="md:hidden p-2 rounded-lg hover:bg-gray-200/60 transition"
@@ -196,11 +228,29 @@ export default function Navbar() {
             id="mobile-menu"
             className="md:hidden px-6 pb-5 pt-2 space-y-4 bg-white/95 supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:backdrop-blur-md border-t border-gray-200"
           >
-            <NavLink onClick={() => setOpen(false)} to="/tools" className="block text-gray-800">Công cụ</NavLink>
-            <NavLink onClick={() => setOpen(false)} to="/trending" className="block text-gray-800">Xu hướng</NavLink>
-            <NavLink onClick={() => setOpen(false)} to="/editor" className="block text-gray-800">Tạo khung</NavLink>
+            {/* Luôn hiển thị */}
+            <NavLink onClick={() => setOpen(false)} to="/tools" className="block text-gray-800">
+              Công cụ
+            </NavLink>
+            <NavLink onClick={() => setOpen(false)} to="/trending" className="block text-gray-800">
+              Xu hướng
+            </NavLink>
 
-            {!me ? (
+            {/* Chỉ hiển thị khi đăng nhập */}
+            {isLoggedIn && (
+              <NavLink onClick={() => setOpen(false)} to="/editor" className="block text-gray-800">
+                Tạo khung
+              </NavLink>
+            )}
+
+            {/* Chỉ hiển thị khi là admin */}
+            {isAdmin && (
+              <NavLink onClick={() => setOpen(false)} to="/admin" className="block text-purple-600 font-medium">
+                Quản trị
+              </NavLink>
+            )}
+
+            {!isLoggedIn ? (
               <button
                 onClick={() => {
                   setOpen(false)
@@ -213,44 +263,24 @@ export default function Navbar() {
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
-                  <img
-                    src={avatarUrl}
-                    alt="avatar"
-                    className="w-10 h-10 rounded-full border object-cover"
-                    referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null
-                      e.currentTarget.src = '/frames/icon/default-avatar.png'
-                    }}
-                  />
+                  <img src={avatarUrl} alt="avatar" className="w-10 h-10 rounded-full border object-cover" />
                   <div>
                     <div className="font-medium text-gray-900">{name}</div>
                     <div className="text-sm text-gray-500">{me?.email}</div>
                   </div>
                 </div>
 
-                <Link
-                  to="/profile"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 text-gray-700 py-2"
-                >
+                <Link to="/profile" onClick={() => setOpen(false)} className="flex items-center gap-3 text-gray-700 py-2">
                   <User size={16} />
                   <span>Tài khoản</span>
                 </Link>
 
-                <Link
-                  to="/my-frames"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 text-gray-700 py-2"
-                >
+                <Link to="/my-frames" onClick={() => setOpen(false)} className="flex items-center gap-3 text-gray-700 py-2">
                   <Image size={16} />
                   <span>Khung hình</span>
                 </Link>
 
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-3 text-red-600 py-2"
-                >
+                <button onClick={handleLogout} className="flex items-center gap-3 text-red-600 py-2">
                   <LogOut size={16} />
                   <span>Đăng xuất</span>
                 </button>

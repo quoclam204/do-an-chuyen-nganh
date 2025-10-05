@@ -295,3 +295,18 @@ VALUES
 (N'captcha_secret_key', N'6LeIxAcTAAAA...', N'Secret key reCAPTCHA demo'),
 (N'salt_ip_hash', N'random-salt-12345', N'Salt để hash IP người dùng');
 GO
+
+
+INSERT INTO dbo.NguoiDung (Email, TenHienThi, AnhDaiDienUrl, VaiTro, TrangThai)
+VALUES (
+  N'nguyenlequoclam@gmail.com',
+  N'Nguyễn Lê Quốc Lâm',
+  N'https://example.com/avatars/quoclam.png',  -- có thể đổi link avatar thật của bạn
+  N'admin',
+  N'hoat_dong'
+);
+GO
+
+SELECT * FROM NguoiDung
+
+SELECT * FROM NguoiDung WHERE Email = 'nguyenlequoclam@gmail.com';
