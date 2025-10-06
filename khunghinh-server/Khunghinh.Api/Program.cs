@@ -18,7 +18,7 @@ builder.Services.AddDbContext<KhunghinhContext>(opt =>
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("spa", p => p
-        .WithOrigins(frontendOrigin)           // prod: https://trendyframe.me
+        .WithOrigins(frontendOrigin) // phải là https://trendyframe.me
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials());

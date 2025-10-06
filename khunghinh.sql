@@ -307,6 +307,16 @@ VALUES (
 );
 GO
 
+INSERT INTO dbo.NguoiDung (Email, TenHienThi, AnhDaiDienUrl, VaiTro, TrangThai)
+VALUES (
+  N'truong77766t@gmail.com',
+  N'Nguyễn Văn Trường',
+  N'https://example.com/avatars/truong.png',
+  N'admin',
+  N'hoat_dong'
+);
+GO
+
 SELECT * FROM NguoiDung
 
 SELECT * FROM NguoiDung WHERE Email = 'nguyenlequoclam@gmail.com';
