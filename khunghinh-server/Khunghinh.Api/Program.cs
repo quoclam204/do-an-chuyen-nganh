@@ -9,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ===== Config =====
 var frontendOrigin = builder.Configuration["FrontendOrigin"] ?? "http://localhost:5173";
+Console.WriteLine($"=== FrontendOrigin from config: {frontendOrigin}");
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("spa", p => p
