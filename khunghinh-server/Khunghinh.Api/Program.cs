@@ -9,12 +9,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ===== Config =====
 var frontendOrigin = builder.Configuration["FrontendOrigin"] ?? "http://localhost:5173";
-
-// ===== Database =====
-builder.Services.AddDbContext<KhunghinhContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
-
-// ===== CORS =====
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("spa", p => p
@@ -23,6 +17,10 @@ builder.Services.AddCors(opt =>
         .AllowAnyMethod()
         .AllowCredentials());
 });
+
+// ===== Database =====
+builder.Services.AddDbContext<KhunghinhContext>(opt =>
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
 // ===== Controllers & Swagger =====
 builder.Services.AddControllers().AddJsonOptions(o =>
