@@ -1,5 +1,6 @@
 ﻿using Khunghinh.Api.Data.Entities;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -91,5 +92,34 @@ window.close();
             await HttpContext.SignOutAsync(); // mặc định cookie scheme
             return Ok();
         }
+
+        [Route("api/auth/callback")]
+        public async Task<IActionResult> Callback()
+        {
+            // Sau khi Google xác thực xong, sign-in user và set cookie
+            var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            if (!result.Succeeded)
+                return Unauthorized();
+
+            // Lấy origin frontend để postMessage về
+            var spaOrigin = _cfg["FrontendOrigin"] ?? "http://localhost:5173";
+
+            return Content($@"
+<!DOCTYPE html>
+<html>
+  <body style='font-family:sans-serif;text-align:center;padding-top:50px'>
+    <p>Đăng nhập thành công. Cửa sổ này sẽ tự đóng...</p>
+    <script>
+      try {{
+        window.opener && window.opener.postMessage('auth:success', '{spaOrigin}');
+      }} catch (err) {{
+        console.error(err);
+      }}
+      window.close();
+    </script>
+  </body>
+</html>", "text/html");
+        }
+
     }
 }
