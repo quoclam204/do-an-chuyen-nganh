@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 
@@ -58,18 +57,6 @@ builder.Services
         options.Scope.Add("profile");
         options.Scope.Add("email");
         options.ClaimActions.MapJsonKey("picture", "picture", "url");
-
-        // ⚠️ Thêm đoạn này
-        options.Events = new OAuthEvents
-        {
-            OnTicketReceived = ctx =>
-            {
-                // Sau khi xác thực Google xong, chuyển hướng về /api/auth/callback
-                ctx.Response.Redirect("/api/auth/callback");
-                ctx.HandleResponse(); // Ngăn middleware xử lý thêm
-                return Task.CompletedTask;
-            }
-        };
     });
 
 builder.Services.AddAuthorization();
