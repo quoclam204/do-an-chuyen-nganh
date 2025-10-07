@@ -8,16 +8,18 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // ===== CORS =====
-var origins = new[]
+var allowedOrigins = new[]
 {
-    builder.Configuration["FrontendOrigin"] ?? "https://trendyframe.me",
+    "https://trendyframe.me",
     "http://localhost:5173"
+    // nếu có www thì thêm "https://www.trendyframe.me"
 };
 
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("spa", p => p
-        .WithOrigins(origins)
+        .WithOrigins(allowedOrigins)
+        .SetIsOriginAllowedToAllowWildcardSubdomains()
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials());
