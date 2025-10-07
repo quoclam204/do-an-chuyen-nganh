@@ -7,27 +7,22 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ===== CORS =====
-var allowedOrigins = new[]
-{
-    "https://trendyframe.me",
-    "http://localhost:5173"
-    // nếu có www thì thêm "https://www.trendyframe.me"
-};
+// ===== Config =====
+var frontendOrigin = builder.Configuration["FrontendOrigin"] ?? "http://localhost:5173";
 
+// ===== Database =====
+builder.Services.AddDbContext<KhunghinhContext>(opt =>
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+
+// ===== CORS =====
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("spa", p => p
-        .WithOrigins(allowedOrigins)
-        .SetIsOriginAllowedToAllowWildcardSubdomains()
+        .WithOrigins(frontendOrigin) // phải là https://trendyframe.me
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials());
 });
-
-// ===== DB =====
-builder.Services.AddDbContext<KhunghinhContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
 // ===== Controllers & Swagger =====
 builder.Services.AddControllers().AddJsonOptions(o =>
@@ -38,7 +33,7 @@ builder.Services.AddControllers().AddJsonOptions(o =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// ===== Auth (Cookies + Google) =====
+// ===== Authentication (Cookie + Google) =====
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -46,8 +41,8 @@ builder.Services
         options.Cookie.Name = "kh_auth";
         options.Cookie.HttpOnly = true;
         options.SlidingExpiration = true;
-        options.Cookie.SameSite = SameSiteMode.None;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.None;             // SPA khác origin
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // cần HTTPS
         options.Events = new CookieAuthenticationEvents
         {
             OnRedirectToLogin = ctx => { ctx.Response.StatusCode = 401; return Task.CompletedTask; },
@@ -58,7 +53,7 @@ builder.Services
     {
         options.ClientId = builder.Configuration["Auth:Google:ClientId"]!;
         options.ClientSecret = builder.Configuration["Auth:Google:ClientSecret"]!;
-        options.CallbackPath = "/signin-google";
+        options.CallbackPath = "/signin-google";   // Google Console: https://<api-domain>/signin-google
         options.Scope.Add("profile");
         options.Scope.Add("email");
         options.ClaimActions.MapJsonKey("picture", "picture", "url");
@@ -68,13 +63,18 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// ===== Forwarded headers (Azure) =====
+// ===== Forwarded headers (Azure/App Service proxy) =====
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor,
-    KnownNetworks = { },
-    KnownProxies = { }
+    ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor
 });
+
+// ===== Auto-migrate EF (tuỳ bạn dùng hay không) =====
+// using (var scope = app.Services.CreateScope())
+// {
+//     var db = scope.ServiceProvider.GetRequiredService<KhunghinhContext>();
+//     db.Database.Migrate();
+// }
 
 // ===== Swagger/HSTS =====
 if (app.Environment.IsDevelopment())
@@ -85,6 +85,9 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseHsts();
+    // Nếu muốn bật Swagger ở prod luôn, mở hai dòng dưới:
+    //  app.UseSwagger();
+    //  app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
@@ -94,7 +97,13 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Ping
+// ===== Root ping để test nhanh =====
 app.MapGet("/", () => Results.Ok("Khunghinh API is running"));
 
 app.Run();
+
+// ===== record demo (nếu còn dùng /weatherforecast) =====
+public record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+{
+    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+}
