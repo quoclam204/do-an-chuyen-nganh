@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // ===== Config =====
-var frontendOrigin = builder.Configuration["FrontendOrigin"] ?? "http://localhost:5173";
+var frontendOrigin = builder.Configuration["FrontendOrigin"] ?? "https://trendyframe.me";
 
 // ===== Database =====
 builder.Services.AddDbContext<KhunghinhContext>(opt =>
