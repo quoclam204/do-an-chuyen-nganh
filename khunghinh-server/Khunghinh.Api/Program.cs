@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // ===== Config =====
-var frontendOrigin = builder.Configuration["FrontendOrigin"] ?? "https://trendyframe.me";
+var frontendOrigin = builder.Configuration["FrontendOrigin"] ?? "http://localhost:5173";
 
 // ===== Database =====
 builder.Services.AddDbContext<KhunghinhContext>(opt =>
@@ -72,17 +72,8 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 // ===== Auto-migrate EF (tuỳ bạn dùng hay không) =====
 using (var scope = app.Services.CreateScope())
 {
-    try
-    {
-        var db = scope.ServiceProvider.GetRequiredService<KhunghinhContext>();
-        db.Database.Migrate(); // ✅ tạo bảng nếu chưa có
-    }
-    catch (Exception ex)
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Database migration failed on startup");
-        // không throw để tránh app sập
-    }
+    var db = scope.ServiceProvider.GetRequiredService<KhunghinhContext>();
+    db.Database.Migrate();
 }
 
 

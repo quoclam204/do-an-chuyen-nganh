@@ -47,8 +47,8 @@ window.close();
         }
 
         // B3: SPA gọi để lấy thông tin user
-        [HttpGet("me")]
         [Authorize]
+        [HttpGet("me")]
         public IActionResult Me()
         {
             var email = User.Claims.FirstOrDefault(c => c.Type.Contains("email"))?.Value;
