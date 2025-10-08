@@ -1,5 +1,4 @@
-﻿using Khunghinh.Api.Data.Entities;
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,11 +10,9 @@ namespace Khunghinh.Api.Controllers
     {
         private readonly string _spaOrigin;
 
-        private readonly KhunghinhContext _db;
-
-        public AuthController(KhunghinhContext db, IConfiguration cfg)
+        public AuthController(IConfiguration cfg)
         {
-            _db = db;
+            // Ví dụ: dev = http://localhost:5173, prod = https://trendyframe.me
             _spaOrigin = cfg["FrontendOrigin"] ?? "http://localhost:5173";
         }
 
@@ -51,36 +48,16 @@ window.close();
         [HttpGet("me")]
         public IActionResult Me()
         {
-            var email = User.Claims.FirstOrDefault(c => c.Type.Contains("email"))?.Value;
-
-            if (string.IsNullOrEmpty(email))
-                return Unauthorized("Email not found in claims");
-
-            var user = _db.NguoiDungs.FirstOrDefault(x => x.Email == email);
-
-            if (user == null)
-            {
-                user = new NguoiDung
-                {
-                    Email = email,
-                    TenHienThi = User.Identity?.Name ?? "User",
-                    VaiTro = "user",
-                    TrangThai = "hoat_dong",
-                    NgayTao = DateTime.UtcNow
-                };
-                _db.NguoiDungs.Add(user);
-                _db.SaveChanges();
-            }
-
-            string? picture = User.Claims.FirstOrDefault(c => c.Type.Contains("picture"))?.Value;
+            string? picture =
+                User.Claims.FirstOrDefault(c => c.Type == "picture")?.Value
+                ?? User.Claims.FirstOrDefault(c => c.Type == "urn:google:picture")?.Value
+                ?? User.Claims.FirstOrDefault(c => c.Type.Contains("picture"))?.Value;
 
             return Ok(new
             {
-                id = user.Id,
-                name = user.TenHienThi,
-                email = user.Email,
-                picture = picture,
-                vaiTro = user.VaiTro // ✅ Trả về vai trò
+                name = User.Identity?.Name,
+                email = User.Claims.FirstOrDefault(c => c.Type.Contains("email"))?.Value,
+                picture
             });
         }
 
