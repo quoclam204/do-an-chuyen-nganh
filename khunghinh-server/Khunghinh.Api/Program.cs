@@ -70,11 +70,21 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 });
 
 // ===== Auto-migrate EF (tuỳ bạn dùng hay không) =====
-// using (var scope = app.Services.CreateScope())
-// {
-//     var db = scope.ServiceProvider.GetRequiredService<KhunghinhContext>();
-//     db.Database.Migrate();
-// }
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<KhunghinhContext>();
+        db.Database.Migrate(); // ✅ tạo bảng nếu chưa có
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Database migration failed on startup");
+        // không throw để tránh app sập
+    }
+}
+
 
 // ===== Swagger/HSTS =====
 if (app.Environment.IsDevelopment())
