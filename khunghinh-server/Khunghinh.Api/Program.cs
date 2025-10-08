@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // ===== Config =====
-var frontendOrigin = builder.Configuration["FrontendOrigin"] ?? "http://localhost:5173";
+var frontendOrigin = (builder.Configuration["FrontendOrigin"] ?? "http://localhost:5173").TrimEnd('/');
 
 // ===== Database =====
 builder.Services.AddDbContext<KhunghinhContext>(opt =>
@@ -18,7 +18,7 @@ builder.Services.AddDbContext<KhunghinhContext>(opt =>
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("spa", p => p
-        .WithOrigins(frontendOrigin) // phải là https://trendyframe.me
+        .WithOrigins(frontendOrigin)       // ví dụ: https://trendyframe.me
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials());
@@ -38,11 +38,14 @@ builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.Cookie.Name = "kh_auth";
+        // Dùng __Host. để tăng bảo mật (chỉ over HTTPS, không set Domain)
+        options.Cookie.Name = "__Host.kh_auth";
         options.Cookie.HttpOnly = true;
-        options.SlidingExpiration = true;
         options.Cookie.SameSite = SameSiteMode.None;             // SPA khác origin
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // cần HTTPS
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // bắt buộc HTTPS
+        options.SlidingExpiration = true;
+
+        // Trả mã 401/403 thay vì redirect (hợp với SPA)
         options.Events = new CookieAuthenticationEvents
         {
             OnRedirectToLogin = ctx => { ctx.Response.StatusCode = 401; return Task.CompletedTask; },
@@ -53,10 +56,20 @@ builder.Services
     {
         options.ClientId = builder.Configuration["Auth:Google:ClientId"]!;
         options.ClientSecret = builder.Configuration["Auth:Google:ClientSecret"]!;
-        options.CallbackPath = "/signin-google";   // Google Console: https://<api-domain>/signin-google
+        // Nếu dùng endpoint mặc định của Google handler:
+        options.CallbackPath = "/signin-google"; // Google Console: https://<api-domain>/signin-google
         options.Scope.Add("profile");
         options.Scope.Add("email");
         options.ClaimActions.MapJsonKey("picture", "picture", "url");
+        options.SaveTokens = true;
+
+        // Nếu OAuth fail thì trả về JSON page đơn giản
+        options.Events.OnRemoteFailure = ctx =>
+        {
+            ctx.Response.Redirect("/api/auth/failure");
+            ctx.HandleResponse();
+            return Task.CompletedTask;
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -69,28 +82,20 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor
 });
 
-// ===== Auto-migrate EF (tuỳ bạn dùng hay không) =====
-if (!app.Environment.IsDevelopment())
-{
-    try
-    {
-        using var scope = app.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<KhunghinhContext>();
-        db.Database.Migrate();
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine("DB migrate failed: " + ex);
-        // Không throw lại để process vẫn sống, bạn xem lỗi chi tiết ở Log Stream
-    }
-}
-else
+// ===== Auto-migrate EF (LOCAL & AZURE) =====
+// Chạy ở cả Dev lẫn Prod để đảm bảo Azure tạo bảng khi khởi động
+try
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<KhunghinhContext>();
     db.Database.Migrate();
+    Console.WriteLine("✅ EF Migrate: done");
 }
-
+catch (Exception ex)
+{
+    Console.Error.WriteLine("❌ EF Migrate failed: " + ex);
+    // Không throw để app vẫn chạy; đọc chi tiết trong Log Stream
+}
 
 // ===== Swagger/HSTS =====
 if (app.Environment.IsDevelopment())
@@ -101,24 +106,24 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseHsts();
-    // Nếu muốn bật Swagger ở prod luôn, mở hai dòng dưới:
-    //  app.UseSwagger();
-    //  app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
+
+// Thứ tự: CORS -> Auth -> Controllers
 app.UseCors("spa");
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-// ===== Root ping để test nhanh =====
+// ===== Health check & ping =====
+app.MapGet("/healthz", () => Results.Ok(new { ok = true, time = DateTimeOffset.UtcNow }));
 app.MapGet("/", () => Results.Ok("Khunghinh API is running"));
 
 app.Run();
 
-// ===== record demo (nếu còn dùng /weatherforecast) =====
+// (Tuỳ dự án) Nếu còn dùng /weatherforecast thì giữ record dưới:
 public record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
