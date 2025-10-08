@@ -70,8 +70,23 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 });
 
 // ===== Auto-migrate EF (tuỳ bạn dùng hay không) =====
-using (var scope = app.Services.CreateScope())
+if (!app.Environment.IsDevelopment())
 {
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KhunghinhContext>();
+        db.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("DB migrate failed: " + ex);
+        // Không throw lại để process vẫn sống, bạn xem lỗi chi tiết ở Log Stream
+    }
+}
+else
+{
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<KhunghinhContext>();
     db.Database.Migrate();
 }
