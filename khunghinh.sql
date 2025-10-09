@@ -1,8 +1,11 @@
-﻿/* ===================== RESET & CREATE DATABASE ===================== */
-IF DB_ID(N'khunghinh') IS NULL
-  CREATE DATABASE [khunghinh];
-GO
-USE [khunghinh];
+﻿    /* ===================== RESET & CREATE DATABASE ===================== */
+
+/* IF DB_ID(N'khunghinh') IS NULL
+  CREATE DATABASE [KhunghinhDb];
+GO */
+
+-- Azure target
+USE [KhunghinhDb];
 GO
 
 /* 0) DROP trigger nếu có */
@@ -223,7 +226,7 @@ BEGIN
 END;
 GO
 
-USE [khunghinh];
+USE [KhunghinhDb];
 GO
 
 /* ========== Người dùng ========== */
