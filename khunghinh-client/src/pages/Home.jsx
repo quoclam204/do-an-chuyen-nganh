@@ -302,25 +302,44 @@ export default function Home() {
         <div className="relative max-w-7xl mx-auto px-6 py-12">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl md:text-3xl font-extrabold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,.35)]">
-              Thử ngay mẫu thiết kế
+              Trang web tham khảo thiết kế
             </h2>
-            <button
-              onClick={() => nav('/trending')}
-              className="px-4 py-2 rounded-xl font-semibold text-white
-                   ring-1 ring-white/40 hover:bg-white/10 transition"
-            >
-              Xem tất cả
-            </button>
           </div>
 
-          {/* Frame Grid - nền trắng */}
-          <div className="rounded-3xl p-2 bg-white ring-1 ring-gray-200 shadow-lg">
-            <FrameGrid
-              frames={frames}
-              onUse={(f) => nav(`/editor?alias=${f.alias}`)}
-            />
+          {/* Danh sách website - nền trắng giữ nguyên */}
+          <div className="rounded-3xl p-10 bg-white ring-1 ring-gray-200 shadow-lg flex flex-col items-center justify-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-12 justify-items-center items-center w-full max-w-3xl">
+              {[
+                {
+                  logo: "/logo-webthamkhao/logo-kh-text.svg",
+                  url: "https://khunghinh.net",
+                },
+                {
+                  logo: "/logo-webthamkhao/image.png",
+                  url: "https://263.id.vn",
+                },
+              ].map((site) => (
+                <a
+                  key={site.url}
+                  href={site.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-52 h-24 md:w-60 md:h-28 transition-transform hover:scale-110 duration-300"
+                >
+                  <img
+                    src={site.logo}
+                    alt={site.url}
+                    className="max-w-full max-h-full object-contain"
+                    style={{ imageRendering: "crisp-edges" }}
+                    loading="lazy"
+                  />
+                </a>
+              ))}
+            </div>
           </div>
+
         </div>
+
       </section>
 
 
