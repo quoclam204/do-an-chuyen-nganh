@@ -126,7 +126,7 @@ export default function Navbar() {
 
             {/* Chỉ hiện khi đã đăng nhập */}
             {me && (
-              <NavLink to="/editor" className="hover:text-blue-600 transition">Tạo khung</NavLink>
+              <NavLink to="/create-frame" className="hover:text-blue-600 transition">Tạo khung</NavLink>
             )}
 
             {/* Chỉ hiện khi là admin */}
@@ -238,7 +238,7 @@ export default function Navbar() {
 
             {/* Chỉ hiển thị khi đăng nhập */}
             {isLoggedIn && (
-              <NavLink onClick={() => setOpen(false)} to="/editor" className="block text-gray-800">
+              <NavLink onClick={() => setOpen(false)} to="/" className="block text-gray-800">
                 Tạo khung
               </NavLink>
             )}

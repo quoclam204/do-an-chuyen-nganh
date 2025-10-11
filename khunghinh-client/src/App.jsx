@@ -12,6 +12,7 @@ import Compress from './pages/Compress.jsx'
 import Resize from './pages/Resize.jsx'           // ✅ thêm trang Resize
 import ImageToPdf from './pages/ImageToPdf.jsx'
 import ScrollToTop from './components/ScrollToTop.jsx'
+import CreateFrame from './pages/CreateFrame'
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/compress" element={<Compress />} />
             <Route path="/resize" element={<Resize />} />
             <Route path="/image-to-pdf" element={<ImageToPdf />} />
+            <Route path="/create-frame" element={<CreateFrame />} />
             <Route path="/:alias" element={<Editor />} />   {/* để cuối để không “ăn” /resize */}
           </Routes>
         </main>

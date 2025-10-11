@@ -5,7 +5,7 @@
 GO */
 
 -- Azure target
-USE [KhunghinhDb];
+USE [khunghinh];
 GO
 
 /* 0) DROP trigger nếu có */
@@ -226,7 +226,7 @@ BEGIN
 END;
 GO
 
-USE [KhunghinhDb];
+USE [khunghinh];
 GO
 
 /* ========== Người dùng ========== */
