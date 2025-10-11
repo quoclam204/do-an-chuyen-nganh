@@ -164,7 +164,7 @@ export default function CreateFrame() {
                         </p>
 
                         {/* Upload Area */}
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8">
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 transition-colors bg-grid">
                             {!preview ? (
                                 <div className="text-center">
                                     <div
@@ -187,10 +187,11 @@ export default function CreateFrame() {
                             ) : (
                                 <div className="text-center">
                                     <div className="relative inline-block">
+                                        <div className="absolute inset-0 rounded-lg bg-checker" />
                                         <img
                                             src={preview}
                                             alt="Preview"
-                                            className="max-w-full max-h-64 rounded-lg shadow-md"
+                                            className="relative max-w-full max-h-64 rounded-lg shadow-md"
                                         />
                                         <button
                                             type="button"
@@ -200,9 +201,7 @@ export default function CreateFrame() {
                                             <X size={14} />
                                         </button>
                                     </div>
-                                    <p className="text-sm text-gray-600 mt-3">
-                                        {selectedFile?.name}
-                                    </p>
+                                    <p className="text-sm text-gray-600 mt-3">{selectedFile?.name}</p>
                                     <button
                                         type="button"
                                         onClick={() => fileInputRef.current?.click()}

@@ -305,22 +305,88 @@ input.slider-soft:disabled {
 
 
 /* Ẩn/thon scrollbar cho thanh kéo ngang */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 
-.thin-scrollbar::-webkit-scrollbar { height: 8px; }
-.thin-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,.2); border-radius: 999px; }
-.thin-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
+.thin-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
 
-@keyframes float { 0%{transform:translateY(0)} 50%{transform:translateY(-10px)} 100%{transform:translateY(0)} }
-@keyframes float-slow { 0%{transform:translateY(0)} 50%{transform:translateY(-14px)} 100%{transform:translateY(0)} }
-.motion-safe\:animate-float { animation: float 7s ease-in-out infinite; }
-.motion-safe\:animate-float-slow { animation: float-slow 11s ease-in-out infinite; }
-/* tôn trọng prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce) {
-  .motion-safe\:animate-float,
-  .motion-safe\:animate-float-slow { animation: none !important; }
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, .2);
+  border-radius: 999px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 
+@keyframes float {
+  0% {
+    transform: translateY(0)
+  }
+
+  50% {
+    transform: translateY(-10px)
+  }
+
+  100% {
+    transform: translateY(0)
+  }
+}
+
+@keyframes float-slow {
+  0% {
+    transform: translateY(0)
+  }
+
+  50% {
+    transform: translateY(-14px)
+  }
+
+  100% {
+    transform: translateY(0)
+  }
+}
+
+.motion-safe\:animate-float {
+  animation: float 7s ease-in-out infinite;
+}
+
+.motion-safe\:animate-float-slow {
+  animation: float-slow 11s ease-in-out infinite;
+}
+
+/* tôn trọng prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+
+  .motion-safe\:animate-float,
+  .motion-safe\:animate-float-slow {
+    animation: none !important;
+  }
+}
+
+/* === NỀN LƯỚI CHO KHUNG UPLOAD === */
+.bg-grid {
+  background-color: #fff;
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to right, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+  background-size: 20px 20px, 20px 20px, 100px 100px, 100px 100px;
+  background-position: 0 0, 0 0, 0 0, 0 0;
+  border-radius: 0.5rem;
+}
+
+/* caro checkerboard sau ảnh (tùy chọn) */
+.bg-checker {
+  background: conic-gradient(#f3f4f6 25%, transparent 0 50%, #f3f4f6 0 75%, transparent 0) 0 0 / 16px 16px;
+}
