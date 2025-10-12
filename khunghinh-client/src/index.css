@@ -390,3 +390,36 @@ input.slider-soft:disabled {
 .bg-checker {
   background: conic-gradient(#f3f4f6 25%, transparent 0 50%, #f3f4f6 0 75%, transparent 0) 0 0 / 16px 16px;
 }
+
+/* index.css */
+
+/* Nút X đậm, rõ, viền trắng, bóng đổ nhẹ */
+.btn-remove-image {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+
+  width: 2.25rem;
+  /* w-9 */
+  height: 2.25rem;
+  /* h-9 */
+  display: grid;
+  place-items: center;
+
+  background: linear-gradient(to bottom, #e11d48, #be123c);
+  /* từ rose-600 đến rose-700 */
+  color: #fff;
+  border-radius: 9999px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(2px);
+
+  transition: all 0.2s ease;
+}
+
+.btn-remove-image:hover {
+  background: linear-gradient(to bottom, #be123c, #9f1239);
+  box-shadow: 0 6px 14px rgba(190, 18, 60, 0.4);
+  transform: scale(1.05);
+}

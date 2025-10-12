@@ -11,10 +11,9 @@ export default function CreateFrame() {
 
     const [formData, setFormData] = useState({
         title: '',
-        url: URL_PREFIX, // ✅ mặc định đúng domain
+        url: URL_PREFIX,
         description: ''
     })
-
     const [selectedFile, setSelectedFile] = useState(null)
     const [preview, setPreview] = useState(null)
     const [loading, setLoading] = useState(false)
@@ -22,29 +21,27 @@ export default function CreateFrame() {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target
-        setFormData(prev => ({ ...prev, [name]: value }))
-        if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }))
+        setFormData((prev) => ({ ...prev, [name]: value }))
+        if (errors[name]) setErrors((p) => ({ ...p, [name]: '' }))
     }
 
     const handleFileSelect = (e) => {
-        const file = e.target.files[0]
+        const file = e.target.files?.[0]
         if (!file) return
 
         if (!file.type.startsWith('image/')) {
-            setErrors(prev => ({ ...prev, file: 'Vui lòng chọn file hình ảnh (PNG, JPG, GIF...)' }))
+            setErrors((p) => ({ ...p, file: 'Vui lòng chọn file hình ảnh (PNG, JPG, GIF...)' }))
             return
         }
-
         if (file.size > 2 * 1024 * 1024) {
-            setErrors(prev => ({ ...prev, file: 'File không được vượt quá 2MB' }))
+            setErrors((p) => ({ ...p, file: 'File không được vượt quá 2MB' }))
             return
         }
-
         setSelectedFile(file)
-        setErrors(prev => ({ ...prev, file: '' }))
+        setErrors((p) => ({ ...p, file: '' }))
 
         const reader = new FileReader()
-        reader.onload = (ev) => setPreview(ev.target.result)
+        reader.onload = (ev) => setPreview(ev.target?.result)
         reader.readAsDataURL(file)
     }
 
@@ -56,19 +53,10 @@ export default function CreateFrame() {
 
     const validateForm = () => {
         const newErrors = {}
-
         const titleTrim = formData.title.trim()
-        if (!titleTrim) {
-            newErrors.title = 'Tiêu đề không được để trống'
-        } else if (titleTrim.length < 10) {
-            // ✅ yêu cầu tối thiểu 10 ký tự
-            newErrors.title = 'Tiêu đề phải có ít nhất 10 ký tự'
-        }
-
-        if (!selectedFile) {
-            newErrors.file = 'Vui lòng chọn hình ảnh khung'
-        }
-
+        if (!titleTrim) newErrors.title = 'Tiêu đề không được để trống'
+        else if (titleTrim.length < 10) newErrors.title = 'Tiêu đề phải có ít nhất 10 ký tự'
+        if (!selectedFile) newErrors.file = 'Vui lòng chọn hình ảnh khung'
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
     }
@@ -77,112 +65,115 @@ export default function CreateFrame() {
         e.preventDefault()
         if (!validateForm()) return
         setLoading(true)
-
         try {
             const submitData = new FormData()
             submitData.append('title', formData.title)
-            submitData.append('url', formData.url) // ✅ gửi đúng URL với prefix trendyframe.me
+            submitData.append('url', formData.url)
             submitData.append('description', formData.description)
             submitData.append('image', selectedFile)
 
-            const response = await fetch(`${BACKEND_ORIGIN}/api/frames/create`, {
+            const res = await fetch(`${BACKEND_ORIGIN}/api/frames/create`, {
                 method: 'POST',
                 credentials: 'include',
                 body: submitData
             })
-
-            if (response.ok) {
-                const result = await response.json()
-                navigate(`/frame/${result.alias}`)
-            } else {
-                throw new Error('Có lỗi xảy ra khi tạo khung')
-            }
-        } catch (error) {
-            console.error('Error creating frame:', error)
-            setErrors(prev => ({ ...prev, submit: 'Có lỗi xảy ra. Vui lòng thử lại.' }))
+            if (!res.ok) throw new Error()
+            const result = await res.json()
+            navigate(`/frame/${result.alias}`)
+        } catch (err) {
+            console.error(err)
+            setErrors((p) => ({ ...p, submit: 'Có lỗi xảy ra. Vui lòng thử lại.' }))
         } finally {
             setLoading(false)
         }
     }
 
-    // Tail của URL để hiện trong input (loại bỏ prefix)
     const urlTail = (formData.url || '').replace(URL_PREFIX, '')
 
     return (
-        <div className="min-h-screen bg-gray-50 py-12">
+        <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white py-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                <div className="text-center mb-10">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-sm font-medium ring-1 ring-blue-200/60 shadow-sm mb-3">
+                        <span className="w-2 h-2 rounded-full bg-blue-600" />
+                        Trình tạo khung hình
+                    </div>
+                    <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
                         TẠO MỚI SỰ KIỆN, HOẠT ĐỘNG, CHIẾN DỊCH
                     </h1>
                 </div>
 
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                    {/* Phần upload hình */}
-                    <div>
-                        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                            Thêm hình khung
-                        </h2>
-                        <p className="text-gray-600 mb-2">
-                            Định dạng bắt buộc hình khung là PNG và phải có vùng trong suốt.
-                        </p>
-                        <p className="text-gray-600 mb-2">
-                            Kích thước đề xuất là hình vuông cạnh <strong>1080px</strong>.
-                        </p>
-                        <p className="text-gray-600 mb-6">
-                            Dung lượng tối đa của hình khung là <strong>2MB</strong>.
-                        </p>
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* LEFT: Upload */}
+                    <section className="bg-white/90 rounded-2xl ring-1 ring-gray-200 shadow-sm p-6">
+                        <header className="mb-4">
+                            <h2 className="text-lg font-semibold text-gray-900">Hình khung</h2>
+                            <p className="text-sm text-gray-500">PNG nền trong suốt • khuyến nghị 1080×1080 • tối đa 2MB</p>
+                        </header>
 
-                        {/* Upload Area */}
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 transition-colors bg-grid">
+                        {/* Dropzone */}
+                        <div
+                            onClick={() => fileInputRef.current?.click()}
+                            className={[
+                                'rounded-xl border-2 border-dashed transition-colors cursor-pointer',
+                                'bg-white grid place-items-center px-6 py-10',
+                                'hover:border-blue-400 hover:bg-blue-50/40'
+                            ].join(' ')}
+                        >
                             {!preview ? (
-                                <div className="text-center">
-                                    <div
-                                        className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 text-white rounded-lg mb-4 cursor-pointer hover:bg-blue-700 transition-colors"
-                                        onClick={() => fileInputRef.current?.click()}
-                                    >
+                                <div className="text-center space-y-3">
+                                    <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 text-white rounded-xl shadow-sm">
                                         <Upload size={24} />
                                     </div>
-                                    <div
-                                        className="text-blue-600 font-medium cursor-pointer hover:text-blue-700"
-                                        onClick={() => fileInputRef.current?.click()}
-                                    >
-                                        Thêm hình khung
-                                    </div>
-                                    <p className="text-sm text-gray-500 mt-2">
-                                        Định dạng PNG, tối đa 2MB<br />
-                                        Kích thước cạnh 1080px.
-                                    </p>
+                                    <div className="text-blue-700 font-semibold">Nhấp để tải ảnh lên hoặc kéo-thả</div>
+                                    <p className="text-sm text-gray-500">Hỗ trợ PNG/JPG/GIF • tối đa 2MB</p>
                                 </div>
                             ) : (
                                 <div className="text-center">
-                                    <div className="relative inline-block">
-                                        <div className="absolute inset-0 rounded-lg bg-checker" />
+                                    <div className="relative inline-block rounded-xl overflow-hidden ring-1 ring-gray-200 shadow-sm">
+                                        {/* checkerboard */}
+                                        <div
+                                            className="absolute inset-0"
+                                            style={{
+                                                background:
+                                                    'conic-gradient(#f3f4f6 25%, transparent 0 50%, #f3f4f6 0 75%, transparent 0) 0 0/18px 18px'
+                                            }}
+                                        />
                                         <img
                                             src={preview}
                                             alt="Preview"
-                                            className="relative max-w-full max-h-64 rounded-lg shadow-md"
+                                            className="relative max-w-full max-h-80 object-contain"
                                         />
                                         <button
                                             type="button"
-                                            onClick={removeFile}
-                                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                removeFile()
+                                            }}
+                                            title="Xóa ảnh"
+                                            className="btn-remove-image"
                                         >
-                                            <X size={14} />
+                                            <X size={18} strokeWidth={3} />
                                         </button>
                                     </div>
-                                    <p className="text-sm text-gray-600 mt-3">{selectedFile?.name}</p>
+
+                                    {selectedFile && (
+                                        <div className="mt-3 text-sm text-gray-600">
+                                            <span className="px-2 py-1 rounded-md bg-gray-100 ring-1 ring-gray-200">
+                                                {selectedFile.name}
+                                            </span>
+                                        </div>
+                                    )}
                                     <button
                                         type="button"
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                                        className="mt-3 text-blue-700 hover:underline text-sm font-medium"
                                     >
-                                        Thay đổi hình ảnh
+                                        Chọn ảnh khác
                                     </button>
                                 </div>
                             )}
-
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -193,113 +184,132 @@ export default function CreateFrame() {
                         </div>
 
                         {errors.file && (
-                            <p className="text-red-500 text-sm mt-2 flex items-center">
-                                <Info size={14} className="mr-1" />
-                                {errors.file}
+                            <p className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+                                <Info size={14} /> {errors.file}
                             </p>
                         )}
-                    </div>
 
-                    {/* Phần thông tin */}
-                    <div>
-                        <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                            Thông tin chung
-                        </h2>
+                        {/* Tips */}
+                        <div className="mt-6 rounded-xl bg-blue-50/70 ring-1 ring-blue-200/60 p-4 text-sm text-blue-800">
+                            Mẹo: Dùng PNG với vùng trong suốt để người dùng thấy ảnh của họ phía sau khung.
+                        </div>
+                    </section>
+
+                    {/* RIGHT: Meta */}
+                    <section className="bg-white/90 rounded-2xl ring-1 ring-gray-200 shadow-sm p-6">
+                        <header className="mb-4">
+                            <h2 className="text-lg font-semibold text-gray-900">Thông tin chung</h2>
+                        </header>
 
                         <div className="space-y-6">
-                            {/* Tiêu đề */}
+                            {/* Title */}
                             <div>
-                                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Tiêu đề <span className="text-red-500">(*)</span>
+                                <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                                    Tiêu đề <span className="text-rose-500">*</span>
                                 </label>
                                 <input
-                                    type="text"
                                     id="title"
                                     name="title"
+                                    type="text"
                                     value={formData.title}
                                     onChange={handleInputChange}
-                                    placeholder="Tối thiểu 10 ký tự"
-                                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${errors.title ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                                        }`}
+                                    placeholder="Ví dụ: Khung xuân 2025 – sắc hoa đào"
+                                    className={[
+                                        'mt-1 w-full px-4 py-3 rounded-xl border outline-none transition',
+                                        'focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+                                        errors.title ? 'border-rose-300 bg-rose-50/40' : 'border-gray-300'
+                                    ].join(' ')}
                                 />
+                                <div className="mt-1 flex items-center justify-between text-xs">
+                                    <span className="text-gray-500">Tối thiểu 10 ký tự</span>
+                                    <span className={`font-medium ${formData.title.trim().length >= 10 ? 'text-green-600' : 'text-gray-400'}`}>
+                                        {formData.title.trim().length}/10
+                                    </span>
+                                </div>
                                 {errors.title && (
-                                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                                        <Info size={14} className="mr-1" />
-                                        {errors.title}
+                                    <p className="text-rose-600 text-sm mt-1 flex items-center gap-1">
+                                        <Info size={14} /> {errors.title}
                                     </p>
                                 )}
                             </div>
 
-                            {/* Đường dẫn */}
+                            {/* URL */}
                             <div>
-                                <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
+                                <label htmlFor="url" className="block text-sm font-medium text-gray-700">
                                     Đường dẫn (URL)
                                 </label>
-                                <div className="flex">
-                                    <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                                <div className="mt-1 flex">
+                                    <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-gray-300 bg-gray-50 text-gray-600 text-sm">
                                         {URL_PREFIX}
                                     </span>
                                     <input
-                                        type="text"
                                         id="url"
                                         name="url"
+                                        type="text"
                                         value={urlTail}
-                                        onChange={(e) => setFormData(prev => ({
-                                            ...prev,
-                                            url: URL_PREFIX + e.target.value
-                                        }))}
-                                        placeholder="duong-dan-khung-hinh"
-                                        className="flex-1 px-4 py-3 border border-l-0 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors border-gray-300"
+                                        onChange={(e) =>
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                url: URL_PREFIX + e.target.value
+                                            }))
+                                        }
+                                        placeholder="ten-khung-hinh"
+                                        className="flex-1 px-4 py-3 border border-l-0 rounded-r-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition border-gray-300"
                                     />
                                 </div>
-                                <p className="text-gray-500 text-sm mt-1">
-                                    Đường dẫn để chia sẻ, để trống để tự tạo từ tiêu đề
-                                </p>
+                                <p className="text-xs text-gray-500 mt-1">Để trống sẽ tự tạo từ tiêu đề.</p>
+                                {formData.url && (
+                                    <div className="mt-2 text-sm">
+                                        <span className="text-gray-500 mr-2">Xem trước:</span>
+                                        <span className="px-2 py-1 rounded bg-gray-100 ring-1 ring-gray-200 text-gray-800">
+                                            {formData.url}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Mô tả */}
+                            {/* Description */}
                             <div>
-                                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                                <label htmlFor="description" className="block text-sm font-medium text-gray-700">
                                     Mô tả
                                 </label>
                                 <textarea
                                     id="description"
                                     name="description"
+                                    rows={4}
                                     value={formData.description}
                                     onChange={handleInputChange}
-                                    rows={4}
-                                    placeholder="Mô tả ngắn về khung hình này..."
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
+                                    placeholder="Mô tả ngắn về khung hình này…"
+                                    className="mt-1 w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none"
                                 />
                             </div>
 
-                            {/* Submit Button */}
+                            {/* Submit */}
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
+                                className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold px-6 py-4 rounded-xl shadow-blue-600/20 shadow-md transition"
                             >
                                 {loading ? (
                                     <>
-                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                                        Đang tạo khung...
+                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                        Đang tạo khung…
                                     </>
                                 ) : (
                                     <>
-                                        <Image size={20} className="mr-2" />
+                                        <Image size={20} />
                                         TẠO KHUNG HÌNH
                                     </>
                                 )}
                             </button>
 
                             {errors.submit && (
-                                <p className="text-red-500 text-sm flex items-center">
-                                    <Info size={14} className="mr-1" />
-                                    {errors.submit}
+                                <p className="text-rose-600 text-sm flex items-center gap-1">
+                                    <Info size={14} /> {errors.submit}
                                 </p>
                             )}
                         </div>
-                    </div>
+                    </section>
                 </form>
             </div>
         </div>
