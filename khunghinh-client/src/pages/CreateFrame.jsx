@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Upload, X, Image, Info } from 'lucide-react'
 
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
+const URL_PREFIX = 'https://trendyframe.me/'
 
 export default function CreateFrame() {
     const navigate = useNavigate()
@@ -10,7 +11,7 @@ export default function CreateFrame() {
 
     const [formData, setFormData] = useState({
         title: '',
-        url: 'https://https://trendyframe.me/',
+        url: URL_PREFIX, // ✅ mặc định đúng domain
         description: ''
     })
 
@@ -19,75 +20,49 @@ export default function CreateFrame() {
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState({})
 
-    // Xử lý thay đổi input
     const handleInputChange = (e) => {
         const { name, value } = e.target
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }))
-
-        // Xóa lỗi khi user bắt đầu nhập
-        if (errors[name]) {
-            setErrors(prev => ({
-                ...prev,
-                [name]: ''
-            }))
-        }
+        setFormData(prev => ({ ...prev, [name]: value }))
+        if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }))
     }
 
-    // Xử lý chọn file
     const handleFileSelect = (e) => {
         const file = e.target.files[0]
         if (!file) return
 
-        // Kiểm tra định dạng file
         if (!file.type.startsWith('image/')) {
-            setErrors(prev => ({
-                ...prev,
-                file: 'Vui lòng chọn file hình ảnh (PNG, JPG, GIF...)'
-            }))
+            setErrors(prev => ({ ...prev, file: 'Vui lòng chọn file hình ảnh (PNG, JPG, GIF...)' }))
             return
         }
 
-        // Kiểm tra kích thước file (2MB)
         if (file.size > 2 * 1024 * 1024) {
-            setErrors(prev => ({
-                ...prev,
-                file: 'File không được vượt quá 2MB'
-            }))
+            setErrors(prev => ({ ...prev, file: 'File không được vượt quá 2MB' }))
             return
         }
 
         setSelectedFile(file)
-        setErrors(prev => ({
-            ...prev,
-            file: ''
-        }))
+        setErrors(prev => ({ ...prev, file: '' }))
 
-        // Tạo preview
         const reader = new FileReader()
-        reader.onload = (e) => {
-            setPreview(e.target.result)
-        }
+        reader.onload = (ev) => setPreview(ev.target.result)
         reader.readAsDataURL(file)
     }
 
-    // Xóa file đã chọn
     const removeFile = () => {
         setSelectedFile(null)
         setPreview(null)
-        if (fileInputRef.current) {
-            fileInputRef.current.value = ''
-        }
+        if (fileInputRef.current) fileInputRef.current.value = ''
     }
 
-    // Validate form
     const validateForm = () => {
         const newErrors = {}
 
-        if (!formData.title.trim()) {
+        const titleTrim = formData.title.trim()
+        if (!titleTrim) {
             newErrors.title = 'Tiêu đề không được để trống'
+        } else if (titleTrim.length < 10) {
+            // ✅ yêu cầu tối thiểu 10 ký tự
+            newErrors.title = 'Tiêu đề phải có ít nhất 10 ký tự'
         }
 
         if (!selectedFile) {
@@ -98,18 +73,15 @@ export default function CreateFrame() {
         return Object.keys(newErrors).length === 0
     }
 
-    // Submit form
     const handleSubmit = async (e) => {
         e.preventDefault()
-
         if (!validateForm()) return
-
         setLoading(true)
 
         try {
             const submitData = new FormData()
             submitData.append('title', formData.title)
-            submitData.append('url', formData.url)
+            submitData.append('url', formData.url) // ✅ gửi đúng URL với prefix trendyframe.me
             submitData.append('description', formData.description)
             submitData.append('image', selectedFile)
 
@@ -121,21 +93,20 @@ export default function CreateFrame() {
 
             if (response.ok) {
                 const result = await response.json()
-                // Chuyển đến trang preview khung vừa tạo
                 navigate(`/frame/${result.alias}`)
             } else {
                 throw new Error('Có lỗi xảy ra khi tạo khung')
             }
         } catch (error) {
             console.error('Error creating frame:', error)
-            setErrors(prev => ({
-                ...prev,
-                submit: 'Có lỗi xảy ra. Vui lòng thử lại.'
-            }))
+            setErrors(prev => ({ ...prev, submit: 'Có lỗi xảy ra. Vui lòng thử lại.' }))
         } finally {
             setLoading(false)
         }
     }
+
+    // Tail của URL để hiện trong input (loại bỏ prefix)
+    const urlTail = (formData.url || '').replace(URL_PREFIX, '')
 
     return (
         <div className="min-h-screen bg-gray-50 py-12">
@@ -247,7 +218,7 @@ export default function CreateFrame() {
                                     name="title"
                                     value={formData.title}
                                     onChange={handleInputChange}
-                                    placeholder="Ví dụ: Tết 10 Ký Tỵ"
+                                    placeholder="Tối thiểu 10 ký tự"
                                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${errors.title ? 'border-red-300 bg-red-50' : 'border-gray-300'
                                         }`}
                                 />
@@ -266,16 +237,16 @@ export default function CreateFrame() {
                                 </label>
                                 <div className="flex">
                                     <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
-                                        https://263.id.vn/
+                                        {URL_PREFIX}
                                     </span>
                                     <input
                                         type="text"
                                         id="url"
                                         name="url"
-                                        value={formData.url.replace('https://263.id.vn/', '')}
+                                        value={urlTail}
                                         onChange={(e) => setFormData(prev => ({
                                             ...prev,
-                                            url: 'https://263.id.vn/' + e.target.value
+                                            url: URL_PREFIX + e.target.value
                                         }))}
                                         placeholder="duong-dan-khung-hinh"
                                         className="flex-1 px-4 py-3 border border-l-0 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors border-gray-300"
