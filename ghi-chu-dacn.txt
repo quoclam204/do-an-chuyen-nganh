@@ -30,3 +30,6 @@ dotnet user-secrets set "Auth:Google:ClientSecret" "GOCSPX-Za31gtZOng9cH1CRgoSPq
 
 Deploy SQL (Azure SQL Database)
 
+2. Thêm package và using cho System.Drawing (FramesController)
+dotnet add package System.Drawing.Common
+

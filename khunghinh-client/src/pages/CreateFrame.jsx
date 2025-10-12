@@ -11,13 +11,65 @@ export default function CreateFrame() {
 
     const [formData, setFormData] = useState({
         title: '',
-        url: URL_PREFIX,
-        description: ''
+        url: URL_PREFIX
     })
     const [selectedFile, setSelectedFile] = useState(null)
     const [preview, setPreview] = useState(null)
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState({})
+
+    // Tạo alias ngẫu nhiên
+    const generateRandomAlias = () => {
+        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+        const length = 8 + Math.floor(Math.random() * 4) // 8-11 ký tự
+        let result = ''
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length))
+        }
+        return result
+    }
+
+    // Kiểm tra alias có tồn tại không
+    const checkAliasExists = async (alias) => {
+        try {
+            const token = localStorage.getItem('kh_token')
+            const response = await fetch(`${BACKEND_ORIGIN}/api/frames/check-alias/${alias}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+
+            if (response.ok) {
+                const data = await response.json()
+                return data.exists // true nếu đã tồn tại
+            }
+            return false
+        } catch (error) {
+            console.error('Error checking alias:', error)
+            return false
+        }
+    }
+
+    // Tạo alias duy nhất
+    const generateUniqueAlias = async () => {
+        let alias = generateRandomAlias()
+        let attempts = 0
+        const maxAttempts = 10
+
+        // Thử tối đa 10 lần để tránh vòng lặp vô hạn
+        while (attempts < maxAttempts) {
+            const exists = await checkAliasExists(alias)
+            if (!exists) {
+                return alias
+            }
+            alias = generateRandomAlias()
+            attempts++
+        }
+
+        // Nếu sau 10 lần vẫn trùng, thêm timestamp
+        return generateRandomAlias() + Date.now().toString().slice(-4)
+    }
 
     const handleInputChange = (e) => {
         const { name, value } = e.target
@@ -65,24 +117,60 @@ export default function CreateFrame() {
         e.preventDefault()
         if (!validateForm()) return
         setLoading(true)
+
         try {
             const submitData = new FormData()
+            submitData.append('file', selectedFile)
             submitData.append('title', formData.title)
-            submitData.append('url', formData.url)
-            submitData.append('description', formData.description)
-            submitData.append('image', selectedFile)
 
-            const res = await fetch(`${BACKEND_ORIGIN}/api/frames/create`, {
+            // Lấy alias từ URL hoặc tạo ngẫu nhiên
+            let alias = (formData.url || '').replace(URL_PREFIX, '').trim()
+
+            // Nếu alias trống hoặc chỉ là prefix, tạo alias ngẫu nhiên
+            if (!alias) {
+                alias = await generateUniqueAlias()
+            }
+
+            submitData.append('alias', alias)
+
+            const token = localStorage.getItem('kh_token')
+            const res = await fetch(`${BACKEND_ORIGIN}/api/frames`, {
                 method: 'POST',
-                credentials: 'include',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
                 body: submitData
             })
-            if (!res.ok) throw new Error()
-            const result = await res.json()
-            navigate(`/frame/${result.alias}`)
+
+            if (!res.ok) {
+                const errorData = await res.text()
+                // Nếu lỗi alias đã tồn tại, thử tạo alias mới
+                if (errorData.includes('alias') || errorData.includes('duplicate') || errorData.includes('trùng')) {
+                    const newAlias = await generateUniqueAlias()
+                    submitData.set('alias', newAlias)
+
+                    // Thử gửi lại với alias mới
+                    const retryRes = await fetch(`${BACKEND_ORIGIN}/api/frames`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: submitData
+                    })
+
+                    if (!retryRes.ok) {
+                        throw new Error('Lỗi khi tạo khung hình')
+                    }
+                } else {
+                    throw new Error(errorData || 'Lỗi khi tạo khung hình')
+                }
+            }
+
+            navigate(`/my-frames`)
+
         } catch (err) {
             console.error(err)
-            setErrors((p) => ({ ...p, submit: 'Có lỗi xảy ra. Vui lòng thử lại.' }))
+            setErrors((p) => ({ ...p, submit: err.message || 'Có lỗi xảy ra. Vui lòng thử lại.' }))
         } finally {
             setLoading(false)
         }
@@ -177,7 +265,8 @@ export default function CreateFrame() {
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept="image/*"
+                                accept="image/png"
+                                multiple
                                 onChange={handleFileSelect}
                                 className="hidden"
                             />
@@ -257,31 +346,17 @@ export default function CreateFrame() {
                                         className="flex-1 px-4 py-3 border border-l-0 rounded-r-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition border-gray-300"
                                     />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">Để trống sẽ tự tạo từ tiêu đề.</p>
-                                {formData.url && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Để trống sẽ tự tạo mã ngẫu nhiên (vd: a7k9x2m1).
+                                </p>
+                                {formData.url && urlTail && (
                                     <div className="mt-2 text-sm">
                                         <span className="text-gray-500 mr-2">Xem trước:</span>
-                                        <span className="px-2 py-1 rounded bg-gray-100 ring-1 ring-gray-200 text-gray-800">
+                                        <span className="px-2 py-1 rounded bg-gray-100 ring-1 ring-gray-200 text-gray-800 break-all">
                                             {formData.url}
                                         </span>
                                     </div>
                                 )}
-                            </div>
-
-                            {/* Description */}
-                            <div>
-                                <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                                    Mô tả
-                                </label>
-                                <textarea
-                                    id="description"
-                                    name="description"
-                                    rows={4}
-                                    value={formData.description}
-                                    onChange={handleInputChange}
-                                    placeholder="Mô tả ngắn về khung hình này…"
-                                    className="mt-1 w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none"
-                                />
                             </div>
 
                             {/* Submit */}
@@ -315,3 +390,7 @@ export default function CreateFrame() {
         </div>
     )
 }
+
+
+
+

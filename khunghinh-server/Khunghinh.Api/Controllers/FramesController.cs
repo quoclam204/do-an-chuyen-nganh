@@ -57,5 +57,31 @@ namespace Khunghinh.Api.Controllers
 
             return Ok(new { id = khung.Id });
         }
+
+        // Lay danh sách khung hình của user hiện tại
+        [HttpGet("my")]
+        [Authorize]
+        public IActionResult MyFrames()
+        {
+            var email = User.Claims.FirstOrDefault(c => c.Type.Contains("email"))?.Value;
+            var user = _db.NguoiDungs.FirstOrDefault(x => x.Email == email);
+            if (user == null) return Unauthorized();
+
+            var frames = _db.KhungHinhs
+                .Where(x => x.ChuSoHuuId == user.Id)
+                .OrderByDescending(x => x.NgayChinhSua ?? x.NgayDang)
+                .Select(x => new {
+                    x.Id,
+                    x.TieuDe,
+                    x.TrangThai,
+                    x.LuotXem,
+                    x.LuotTai,
+                    x.NgayDang,
+                    x.NgayChinhSua,
+                    x.UrlXemTruoc
+                }).ToList();
+
+            return Ok(frames);
+        }
     }
 }
