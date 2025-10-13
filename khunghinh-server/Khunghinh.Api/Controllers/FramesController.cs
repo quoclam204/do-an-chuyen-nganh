@@ -146,5 +146,45 @@ namespace Khunghinh.Api.Controllers
                 return StatusCode(500, "Lỗi server");
             }
         }
+
+        [HttpDelete("{id:long}")]
+        [Authorize]
+        public async Task<IActionResult> Delete(long id)
+        {
+            try
+            {
+                // Lấy email user từ claims
+                string? userEmail =
+                    User.FindFirst(ClaimTypes.Email)?.Value ??
+                    User.FindFirst("email")?.Value ??
+                    User.FindFirst("preferred_username")?.Value;
+
+                var user = _db.NguoiDungs.FirstOrDefault(x => x.Email == userEmail);
+                if (user == null) return Unauthorized();
+
+                // Tìm khung hình thuộc về user
+                var frame = _db.KhungHinhs.FirstOrDefault(x => x.Id == id && x.ChuSoHuuId == user.Id);
+                if (frame == null) return NotFound("Không tìm thấy khung hình hoặc bạn không có quyền xóa.");
+
+                // Xóa file vật lý nếu có
+                if (!string.IsNullOrWhiteSpace(frame.UrlXemTruoc))
+                {
+                    var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                    var filePath = Path.Combine(webRoot, frame.UrlXemTruoc.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (System.IO.File.Exists(filePath))
+                        System.IO.File.Delete(filePath);
+                }
+
+                _db.KhungHinhs.Remove(frame);
+                await _db.SaveChangesAsync();
+
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DeleteFrame] ERROR: {ex}");
+                return StatusCode(500, $"Lỗi server: {ex.Message}");
+            }
+        }
     }
 }
