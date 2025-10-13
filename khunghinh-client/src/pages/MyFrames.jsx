@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Plus, Loader2, Search, Filter, ChevronDown, Trash2, Pencil, Eye } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Plus, Loader2, Search, ChevronDown, Trash2, Pencil, Eye } from 'lucide-react'
 
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 
@@ -14,7 +14,7 @@ const STATUS_META = {
     pending: { label: 'Chờ duyệt', chip: 'bg-amber-50 text-amber-700 ring-amber-200', dot: 'bg-amber-500' }
 }
 
-// A lightweight confirmation dialog (no deps)
+// Tiny confirm dialog
 function ConfirmDialog({ open, title, description, confirmText = 'Xác nhận', cancelText = 'Hủy', onConfirm, onClose }) {
     if (!open) return null
     return (
@@ -33,7 +33,6 @@ function ConfirmDialog({ open, title, description, confirmText = 'Xác nhận', 
     )
 }
 
-// A tiny badge component
 function StatusBadge({ status }) {
     const meta = STATUS_META[status] || STATUS_META.active
     return (
@@ -44,7 +43,6 @@ function StatusBadge({ status }) {
     )
 }
 
-// Skeleton row
 function RowSkeleton() {
     return (
         <tr className="animate-pulse">
@@ -58,13 +56,15 @@ function RowSkeleton() {
 }
 
 export default function MyFrames() {
+    const navigate = useNavigate()
+
     const [frames, setFrames] = useState([])
     const [loading, setLoading] = useState(true)
     const [me, setMe] = useState(null)
     const [query, setQuery] = useState('')
-    const [status, setStatus] = useState('all') // all | active | inactive | pending
-    const [sortKey, setSortKey] = useState('updatedAt') // title | clicks | uses | createdAt | updatedAt
-    const [sortDir, setSortDir] = useState('desc') // asc | desc
+    const [status, setStatus] = useState('all')            // all | active | inactive | pending
+    const [sortKey, setSortKey] = useState('updatedAt')    // title | clicks | uses | createdAt | updatedAt
+    const [sortDir, setSortDir] = useState('desc')         // asc | desc
     const [askDelete, setAskDelete] = useState({ open: false, id: null })
 
     useEffect(() => {
@@ -75,47 +75,82 @@ export default function MyFrames() {
                 picture: 'https://i.imgur.com/your-custom-avatar.png'
             }
             setMe(userData)
-        } catch { }
+        } catch { /* ignore */ }
+
         fetchMyFrames()
     }, [])
 
-    const fetchMyFrames = async () => {
+    async function fetchMyFrames() {
         try {
             setLoading(true)
-            const res = await fetch(`${BACKEND_ORIGIN}/api/frames/my-frames`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('kh_token')}` }
+            // ✅ ĐÚNG ROUTE + DÙNG COOKIE
+            const res = await fetch(`${BACKEND_ORIGIN}/api/frames/my`, {
+                credentials: 'include'
             })
+
+            if (res.status === 401) {
+                // Chưa đăng nhập → đưa người dùng tới trang đăng nhập hoặc thông báo
+                // navigate('/login') // nếu bạn có trang login riêng
+                setFrames([])
+                setLoading(false)
+                return
+            }
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const apiData = await res.json()
-            const finalFrames = (Array.isArray(apiData) && apiData.length > 0)
-                ? apiData
-                : [{
-                    id: 'mock-1',
-                    title: 'Khung chúc mừng 20/11',
-                    status: 'active',
-                    clicks: 18,
-                    uses: 7,
-                    createdAt: '2025-10-12T00:00:00Z',
-                    updatedAt: '2025-10-12T00:00:00Z',
-                    imageUrl: 'https://i.imgur.com/kS5YdY2.png'
-                }]
-            setFrames(finalFrames)
-        } catch {
+
+            // ✅ Map field từ API (Vietnamese) → UI (English)
+            // API: Id, TieuDe, TrangThai, LuotXem, LuotTai, NgayDang, NgayChinhSua, UrlXemTruoc
+            const mapped = (apiData || []).map(x => ({
+                id: x.id ?? x.Id,
+                title: x.tieuDe ?? x.TieuDe ?? '(không có tiêu đề)',
+                status: mapStatus(x.trangThai ?? x.TrangThai),
+                clicks: x.luotXem ?? x.LuotXem ?? 0,
+                uses: x.luotTai ?? x.LuotTai ?? 0,
+                createdAt: x.ngayDang ?? x.NgayDang,
+                updatedAt: x.ngayChinhSua ?? x.NgayChinhSua,
+                imageUrl: x.urlXemTruoc ?? x.UrlXemTruoc ? withBackendOrigin(x.urlXemTruoc ?? x.UrlXemTruoc) : '/placeholder-frame.png'
+            }))
+
+            setFrames(mapped)
+        } catch (e) {
+            console.error('fetchMyFrames error:', e)
             setFrames([])
         } finally {
             setLoading(false)
         }
     }
 
+    // Map trạng thái trong DB → key dùng cho UI
+    function mapStatus(dbStatus) {
+        // ví dụ DB đang lưu "dang_hoat_dong" | "tam_dung" | "cho_duyet"
+        if (!dbStatus) return 'active'
+        const s = String(dbStatus).toLowerCase()
+        if (s.includes('tam') || s.includes('inactive')) return 'inactive'
+        if (s.includes('cho') || s.includes('pending')) return 'pending'
+        return 'active'
+    }
+
+    // Nếu UrlXemTruoc là "/frames/abc.png" → gắn BACKEND_ORIGIN
+    function withBackendOrigin(url) {
+        if (!url) return url
+        if (url.startsWith('http://') || url.startsWith('https://')) return url
+        return `${BACKEND_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`
+    }
+
     const requestDelete = (id) => setAskDelete({ open: true, id })
     const closeDelete = () => setAskDelete({ open: false, id: null })
-    const confirmDelete = async () => {
+
+    async function confirmDelete() {
         const id = askDelete.id
         closeDelete()
         if (!id) return
         try {
+            // ⚠️ Backend hiện CHƯA có DELETE /api/frames/{id}
+            // Nếu bạn đã thêm rồi: nhớ [Authorize] + dùng cookie
             const res = await fetch(`${BACKEND_ORIGIN}/api/frames/${id}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${localStorage.getItem('kh_token')}` }
+                credentials: 'include'
             })
             if (!res.ok) throw new Error()
             setFrames(prev => prev.filter(f => f.id !== id))
@@ -135,8 +170,7 @@ export default function MyFrames() {
                 if (sortKey === 'title') return `${x.title || ''}`.toLowerCase()
                 return x[sortKey] || 0
             }
-            const va = get(a)
-            const vb = get(b)
+            const va = get(a), vb = get(b)
             if (va < vb) return -1 * dir
             if (va > vb) return 1 * dir
             return 0
@@ -153,7 +187,7 @@ export default function MyFrames() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-                {/* ===== top profile card ===== */}
+                {/* profile */}
                 <aside className="mx-auto max-w-xl">
                     <div className="relative overflow-hidden rounded-3xl bg-white ring-1 ring-slate-200 shadow-sm">
                         <div className="absolute inset-0 bg-[radial-gradient(80%_60%_at_10%_10%,#e0f2fe_0%,transparent_60%),radial-gradient(80%_60%_at_90%_10%,#dcfce7_0%,transparent_60%)] opacity-60" />
@@ -173,10 +207,9 @@ export default function MyFrames() {
                     </div>
                 </aside>
 
-                {/* spacing */}
                 <div className="h-8" />
 
-                {/* ===== toolbar ===== */}
+                {/* toolbar */}
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-1 items-center gap-2">
                         <div className="relative w-full sm:max-w-xs">
@@ -211,7 +244,7 @@ export default function MyFrames() {
                     </Link>
                 </div>
 
-                {/* ===== table ===== */}
+                {/* table */}
                 <section className="min-w-0">
                     <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm">
                         <div className="max-w-full overflow-x-auto">
@@ -263,11 +296,7 @@ export default function MyFrames() {
                                 </thead>
 
                                 <tbody className="divide-y divide-slate-100">
-                                    {loading && (
-                                        <>
-                                            {Array.from({ length: 6 }).map((_, i) => <RowSkeleton key={i} />)}
-                                        </>
-                                    )}
+                                    {loading && Array.from({ length: 6 }).map((_, i) => <RowSkeleton key={i} />)}
 
                                     {!loading && filtered.length === 0 && (
                                         <tr>
@@ -333,7 +362,6 @@ export default function MyFrames() {
                             </table>
                         </div>
 
-                        {/* footer bar */}
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t bg-slate-50 px-6 py-3 text-xs text-slate-600">
                             <div>Tổng cộng: <span className="font-semibold text-slate-900">{filtered.length}</span> khung hình</div>
                             <div>
@@ -344,7 +372,6 @@ export default function MyFrames() {
                 </section>
             </div>
 
-            {/* confirm delete */}
             <ConfirmDialog
                 open={askDelete.open}
                 title="Xóa khung hình?"

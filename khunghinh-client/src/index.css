@@ -423,3 +423,7 @@ input.slider-soft:disabled {
   box-shadow: 0 6px 14px rgba(190, 18, 60, 0.4);
   transform: scale(1.05);
 }
+
+.btn-remove-image {
+  @apply absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 opacity-90 hover:opacity-100;
+}

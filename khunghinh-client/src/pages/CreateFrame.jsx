@@ -32,12 +32,9 @@ export default function CreateFrame() {
     // Kiểm tra alias có tồn tại không
     const checkAliasExists = async (alias) => {
         try {
-            const token = localStorage.getItem('kh_token')
+            // ✅ Chỉ dùng cookies, bỏ Bearer token
             const response = await fetch(`${BACKEND_ORIGIN}/api/frames/check-alias/${alias}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+                credentials: 'include'
             })
 
             if (response.ok) {
@@ -81,14 +78,17 @@ export default function CreateFrame() {
         const file = e.target.files?.[0]
         if (!file) return
 
-        if (!file.type.startsWith('image/')) {
-            setErrors((p) => ({ ...p, file: 'Vui lòng chọn file hình ảnh (PNG, JPG, GIF...)' }))
+        // ✅ Chỉ chấp nhận PNG
+        if (file.type !== 'image/png') {
+            setErrors((p) => ({ ...p, file: 'Chỉ chấp nhận file PNG với nền trong suốt' }))
             return
         }
+
         if (file.size > 2 * 1024 * 1024) {
             setErrors((p) => ({ ...p, file: 'File không được vượt quá 2MB' }))
             return
         }
+
         setSelectedFile(file)
         setErrors((p) => ({ ...p, file: '' }))
 
@@ -123,38 +123,30 @@ export default function CreateFrame() {
             submitData.append('file', selectedFile)
             submitData.append('title', formData.title)
 
-            // Lấy alias từ URL hoặc tạo ngẫu nhiên
             let alias = (formData.url || '').replace(URL_PREFIX, '').trim()
-
-            // Nếu alias trống hoặc chỉ là prefix, tạo alias ngẫu nhiên
             if (!alias) {
                 alias = await generateUniqueAlias()
             }
-
             submitData.append('alias', alias)
 
-            const token = localStorage.getItem('kh_token')
+            // ✅ Bỏ token, chỉ dùng cookies
             const res = await fetch(`${BACKEND_ORIGIN}/api/frames`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
+                credentials: 'include',
                 body: submitData
             })
 
             if (!res.ok) {
                 const errorData = await res.text()
-                // Nếu lỗi alias đã tồn tại, thử tạo alias mới
+                console.error('Server error:', errorData) // ✅ Debug
+
                 if (errorData.includes('alias') || errorData.includes('duplicate') || errorData.includes('trùng')) {
                     const newAlias = await generateUniqueAlias()
                     submitData.set('alias', newAlias)
 
-                    // Thử gửi lại với alias mới
                     const retryRes = await fetch(`${BACKEND_ORIGIN}/api/frames`, {
                         method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        },
+                        credentials: 'include',
                         body: submitData
                     })
 
@@ -167,9 +159,8 @@ export default function CreateFrame() {
             }
 
             navigate(`/my-frames`)
-
         } catch (err) {
-            console.error(err)
+            console.error('Submit error:', err)
             setErrors((p) => ({ ...p, submit: err.message || 'Có lỗi xảy ra. Vui lòng thử lại.' }))
         } finally {
             setLoading(false)
@@ -214,8 +205,8 @@ export default function CreateFrame() {
                                     <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 text-white rounded-xl shadow-sm">
                                         <Upload size={24} />
                                     </div>
-                                    <div className="text-blue-700 font-semibold">Nhấp để tải ảnh lên hoặc kéo-thả</div>
-                                    <p className="text-sm text-gray-500">Hỗ trợ PNG/JPG/GIF • tối đa 2MB</p>
+                                    <div className="text-blue-700 font-semibold">Nhấp để tải ảnh PNG lên hoặc kéo-thả</div>
+                                    <p className="text-sm text-gray-500">Chỉ hỗ trợ PNG nền trong suốt • tối đa 2MB</p>
                                 </div>
                             ) : (
                                 <div className="text-center">
@@ -240,7 +231,7 @@ export default function CreateFrame() {
                                                 removeFile()
                                             }}
                                             title="Xóa ảnh"
-                                            className="btn-remove-image"
+                                            className="absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 opacity-90 hover:opacity-100"
                                         >
                                             <X size={18} strokeWidth={3} />
                                         </button>
@@ -265,9 +256,8 @@ export default function CreateFrame() {
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept="image/png"
-                                multiple
-                                onChange={handleFileSelect}
+                                accept="image/png" // ✅ Chỉ chấp nhận PNG
+                                onChange={handleFileSelect} // ✅ Bỏ multiple
                                 className="hidden"
                             />
                         </div>
@@ -346,9 +336,7 @@ export default function CreateFrame() {
                                         className="flex-1 px-4 py-3 border border-l-0 rounded-r-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition border-gray-300"
                                     />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Để trống sẽ tự tạo mã ngẫu nhiên (vd: a7k9x2m1).
-                                </p>
+
                                 {formData.url && urlTail && (
                                     <div className="mt-2 text-sm">
                                         <span className="text-gray-500 mr-2">Xem trước:</span>
