@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Upload, X, Image, Info } from 'lucide-react'
 
@@ -17,6 +17,14 @@ export default function CreateFrame() {
     const [preview, setPreview] = useState(null)
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState({})
+    const [success, setSuccess] = useState(null) // ✅ trạng thái thông báo
+
+    // ✅ Auto ẩn thông báo sau 5 giây
+    useEffect(() => {
+        if (!success) return
+        const t = setTimeout(() => setSuccess(null), 10000)
+        return () => clearTimeout(t)
+    }, [success])
 
     // Tạo alias ngẫu nhiên
     const generateRandomAlias = () => {
@@ -158,7 +166,10 @@ export default function CreateFrame() {
                 }
             }
 
-            navigate(`/my-frames`)
+            // ✅ CHỈ hiện thông báo — KHÔNG tự chuyển trang
+            setSuccess(formData.title.trim())
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            // ❌ Không navigate tự động nữa
         } catch (err) {
             console.error('Submit error:', err)
             setErrors((p) => ({ ...p, submit: err.message || 'Có lỗi xảy ra. Vui lòng thử lại.' }))
@@ -171,6 +182,33 @@ export default function CreateFrame() {
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white py-12">
+            {/* ✅ Banner thông báo (tự ẩn sau 5s, chỉ điều hướng khi user bấm) */}
+            {success && (
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6" aria-live="polite" aria-atomic="true">
+                    <div className="relative rounded-md bg-emerald-100 text-emerald-900 px-4 py-3 ring-1 ring-emerald-200 shadow-sm">
+                        <span>
+                            Tạo khung hình <strong>{success}</strong> thành công!{' '}
+                            <button
+                                type="button"
+                                className="underline text-blue-700 hover:text-blue-800"
+                                onClick={() => navigate('/my-frames')}
+                            >
+                                Xem tại đây
+                            </button>
+                            .
+                        </span>
+                        <button
+                            type="button"
+                            aria-label="Đóng"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-900/70 hover:text-emerald-900"
+                            onClick={() => setSuccess(null)}
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <div className="text-center mb-10">
@@ -378,7 +416,3 @@ export default function CreateFrame() {
         </div>
     )
 }
-
-
-
-

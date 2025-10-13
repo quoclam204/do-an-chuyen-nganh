@@ -9,8 +9,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ===== Config =====
 var frontendOrigin = builder.Configuration["FrontendOrigin"] ?? "http://localhost:5173";
-// Nếu API chạy ở subdomain (api.trendyframe.me), cấu hình domain cookie dùng chung gốc:
-var cookieDomain = builder.Configuration["Cookie:Domain"]; // ví dụ ".trendyframe.me"
 
 // (khuyến nghị) Đảm bảo webroot là "wwwroot"
 builder.WebHost.UseWebRoot("wwwroot");
@@ -23,8 +21,7 @@ builder.Services.AddDbContext<KhunghinhContext>(opt =>
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("spa", p => p
-        .WithOrigins(frontendOrigin /* ví dụ https://trendyframe.me */,
-                     "http://localhost:5173") // thêm local dev nếu cần
+        .WithOrigins(frontendOrigin) // phải là https://trendyframe.me
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials());
@@ -47,17 +44,8 @@ builder.Services
         options.Cookie.Name = "kh_auth";
         options.Cookie.HttpOnly = true;
         options.SlidingExpiration = true;
-
-        // ✅ BẮT BUỘC khi FE và BE khác origin
-        options.Cookie.SameSite = SameSiteMode.None;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-
-        // ✅ Nếu BE là api.trendyframe.me và FE là trendyframe.me → đặt domain cookie dùng chung
-        if (!string.IsNullOrWhiteSpace(cookieDomain))
-        {
-            options.Cookie.Domain = cookieDomain; // ".trendyframe.me"
-        }
-
+        options.Cookie.SameSite = SameSiteMode.None;             // SPA khác origin
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // cần HTTPS
         options.Events = new CookieAuthenticationEvents
         {
             OnRedirectToLogin = ctx => { ctx.Response.StatusCode = 401; return Task.CompletedTask; },
@@ -84,6 +72,13 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor
 });
 
+// ===== Auto-migrate EF (tuỳ bạn dùng hay không) =====
+// using (var scope = app.Services.CreateScope())
+// {
+//     var db = scope.ServiceProvider.GetRequiredService<KhunghinhContext>();
+//     db.Database.Migrate();
+// }
+
 // ===== Swagger/HSTS =====
 if (app.Environment.IsDevelopment())
 {
@@ -93,6 +88,9 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseHsts();
+    // Nếu muốn bật Swagger ở prod luôn, mở hai dòng dưới:
+    //  app.UseSwagger();
+    //  app.UseSwaggerUI();
 }
 
 // ✅ PHỤC VỤ FILE TĨNH (bắt buộc khi bạn lưu ảnh vào wwwroot/frames)
@@ -109,3 +107,9 @@ app.MapControllers();
 app.MapGet("/", () => Results.Ok("Khunghinh API is running"));
 
 app.Run();
+
+// ===== record demo (nếu còn dùng /weatherforecast) =====
+public record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+{
+    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+}
