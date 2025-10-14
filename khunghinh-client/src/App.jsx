@@ -36,8 +36,8 @@ export default function App() {
             <Route path="/image-to-pdf" element={<ImageToPdf />} />
             <Route path="/create-frame" element={<CreateFrame />} />
             <Route path="/frame/:id" element={<FrameDetail />} />
-            <Route path="/:alias" element={<Editor />} />   {/* để cuối để không “ăn” /resize */}
             <Route path="/my-frames" element={<MyFrames />} />
+            <Route path="/:alias" element={<Editor />} />   {/* để cuối để không “ăn” /resize */}
           </Routes>
         </main>
 

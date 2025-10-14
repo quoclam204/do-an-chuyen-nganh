@@ -186,5 +186,26 @@ namespace Khunghinh.Api.Controllers
                 return StatusCode(500, $"Lỗi server: {ex.Message}");
             }
         }
+
+        [HttpGet("alias/{alias}")]
+        [AllowAnonymous]
+        public IActionResult GetByAlias(string alias)
+        {
+            var frame = _db.KhungHinhs
+                .Where(x => x.Alias == alias && x.TrangThai == "dang_hoat_dong")
+                .Select(x => new {
+                    x.Id,
+                    x.TieuDe,
+                    x.Alias,
+                    x.UrlXemTruoc
+                })
+                .FirstOrDefault();
+
+            if (frame == null)
+                return NotFound();
+
+            return Ok(frame);
+        }
+
     }
 }

@@ -93,6 +93,24 @@ else
     //  app.UseSwaggerUI();
 }
 
+// ✅ SỬA: STATIC FILES VỚI CORS HEADERS
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        // Cho phép CORS cho static files (đặc biệt cho /frames/)
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", frontendOrigin);
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "*");
+
+        // Cache cho hình ảnh (tùy chọn)
+        if (ctx.File.Name.EndsWith(".png") || ctx.File.Name.EndsWith(".jpg") || ctx.File.Name.EndsWith(".jpeg"))
+        {
+            ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=86400"); // 1 day
+        }
+    }
+});
+
 // ✅ PHỤC VỤ FILE TĨNH (bắt buộc khi bạn lưu ảnh vào wwwroot/frames)
 app.UseStaticFiles();
 

@@ -44,7 +44,19 @@ export default function TryFrame() {
   const nav = useNavigate()
 
   const [frame, setFrame] = useState(null)
-  const overlayUrl = useMemo(() => frame?.overlay || frame?.thumb || '', [frame])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const overlayUrl = useMemo(() => {
+    if (!frame?.overlay && !frame?.thumb) return ''
+
+    // Nếu URL từ backend bắt đầu bằng /frames, thêm BACKEND_ORIGIN
+    const url = frame.overlay || frame.thumb
+    if (url.startsWith('/frames/')) {
+      const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
+      return `${BACKEND_ORIGIN}${url}`
+    }
+    return url
+  }, [frame])
 
   // Hiệu ứng
   const [effects, setEffects] = useState({
@@ -65,7 +77,24 @@ export default function TryFrame() {
   const stageRef = useRef(null)
 
   useEffect(() => {
-    getFrameByAlias(alias).then(setFrame).catch(() => setFrame(null))
+    setLoading(true)
+    setError(null)
+
+    getFrameByAlias(alias)
+      .then(result => {
+        if (result) {
+          setFrame(result)
+        } else {
+          setError('Không tìm thấy khung hình')
+        }
+      })
+      .catch(err => {
+        console.error('Error loading frame:', err)
+        setError('Lỗi khi tải khung hình')
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [alias])
 
   const downloadPNG = () => {
@@ -80,23 +109,49 @@ export default function TryFrame() {
     a.remove()
   }
 
-  if (frame === null) {
+  // Loading state
+  if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="text-slate-600">Đang tải khung…</div>
+        <div className="flex items-center justify-center">
+          <div className="text-slate-600">Đang tải khung…</div>
+        </div>
       </div>
     )
   }
+
+  // Error state
+  if (error || !frame) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="text-center">
+          <div className="text-rose-600 font-semibold mb-3">
+            {error || 'Không tìm thấy khung hình'}
+          </div>
+          <button
+            onClick={() => nav('/trending')}
+            className="px-4 py-2 rounded-lg border hover:bg-slate-50"
+          >
+            Về trang Xu hướng
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // No overlay URL
   if (!overlayUrl) {
     return (
       <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="text-rose-600 font-semibold">Không tìm thấy ảnh khung.</div>
-        <button
-          onClick={() => nav('/trending')}
-          className="mt-3 px-4 py-2 rounded-lg border hover:bg-slate-50"
-        >
-          Về trang Xu hướng
-        </button>
+        <div className="text-center">
+          <div className="text-rose-600 font-semibold mb-3">Không tìm thấy ảnh khung.</div>
+          <button
+            onClick={() => nav('/trending')}
+            className="px-4 py-2 rounded-lg border hover:bg-slate-50"
+          >
+            Về trang Xu hướng
+          </button>
+        </div>
       </div>
     )
   }
