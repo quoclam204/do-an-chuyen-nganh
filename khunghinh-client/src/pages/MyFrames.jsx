@@ -68,17 +68,52 @@ export default function MyFrames() {
     const [askDelete, setAskDelete] = useState({ open: false, id: null })
 
     useEffect(() => {
+        // Lấy thông tin từ localStorage trước (để hiển thị nhanh)
         try {
-            const userData = JSON.parse(localStorage.getItem('kh_me') || 'null') || {
-                name: 'Quốc Lâm',
-                createdAt: '2025-05-31T00:00:00Z',
-                picture: 'https://i.imgur.com/your-custom-avatar.png'
+            const userData = JSON.parse(localStorage.getItem('kh_me') || 'null')
+            if (userData) {
+                setMe(userData)
             }
-            setMe(userData)
         } catch { /* ignore */ }
 
+        // Sau đó fetch thông tin mới nhất từ server
+        fetchUserProfile()
         fetchMyFrames()
     }, [])
+
+    // Thêm function fetch thông tin user từ API
+    async function fetchUserProfile() {
+        try {
+            const res = await fetch(`${BACKEND_ORIGIN}/api/user/profile`, {
+                credentials: 'include'  // Gửi cookie authentication
+            })
+
+            if (res.ok) {
+                const userData = await res.json()
+
+                // Map dữ liệu từ API (tùy theo cấu trúc response)
+                const mappedUser = {
+                    id: userData.id || userData.Id,
+                    name: userData.name || userData.Name || userData.hoTen || userData.HoTen,
+                    email: userData.email || userData.Email,
+                    picture: userData.picture || userData.Picture || userData.avatar || userData.Avatar,
+                    createdAt: userData.createdAt || userData.CreatedAt || userData.ngayTao || userData.NgayTao
+                }
+
+                setMe(mappedUser)
+
+                // Lưu vào localStorage để dùng lần sau
+                localStorage.setItem('kh_me', JSON.stringify(mappedUser))
+            } else if (res.status === 401) {
+                // Chưa đăng nhập, xóa data cũ
+                localStorage.removeItem('kh_me')
+                setMe(null)
+            }
+        } catch (error) {
+            console.error('Error fetching user profile:', error)
+            // Giữ nguyên data từ localStorage nếu API lỗi
+        }
+    }
 
     async function fetchMyFrames() {
         try {

@@ -157,6 +157,8 @@ export default function Editor() {
     let alive = true
     setFrame(null)
     setFrameError('')
+
+    // sẽ gọi API: -> chạy hàm GetByAlias(backend)
     getFrameByAlias(alias)
       .then((f) => { if (alive) setFrame(f || null); if (alive && !f) setFrameError('Không tìm thấy khung cho alias này.') })
       .catch(() => alive && setFrameError('Không tải được khung (overlay).'))
@@ -278,7 +280,11 @@ export default function Editor() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-extrabold text-center mb-5">#TuhaoVietNam</h1>
+
+      {/* TIÊU ĐỀ KHUNG HÌNH THEO KHUNG ĐÃ TẠO*/}
+      <h1 className="text-3xl font-extrabold text-center mb-5">
+        {frame?.name || alias}
+      </h1>
 
       {/* KHUNG NÉT ĐỨT CHÍNH */}
       <div

@@ -93,7 +93,7 @@ else
     //  app.UseSwaggerUI();
 }
 
-// ✅ SỬA: STATIC FILES VỚI CORS HEADERS
+// ✅ SỬA: STATIC FILES VỚI CORS HEADERS (khunghinh theo alias)
 app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = ctx =>
@@ -106,6 +106,7 @@ app.UseStaticFiles(new StaticFileOptions
         // Cache cho hình ảnh (tùy chọn)
         if (ctx.File.Name.EndsWith(".png") || ctx.File.Name.EndsWith(".jpg") || ctx.File.Name.EndsWith(".jpeg"))
         {
+            // cho phép cache ảnh công khai trong 24h, giúp tải nhanh hơn và giảm tải server.
             ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=86400"); // 1 day
         }
     }
