@@ -10,8 +10,6 @@ var builder = WebApplication.CreateBuilder(args);
 // ===== Config =====
 var frontendOrigin = builder.Configuration["FrontendOrigin"] ?? "http://localhost:5173";
 
-// (khuyến nghị) Đảm bảo webroot là "wwwroot"
-builder.WebHost.UseWebRoot("wwwroot");
 
 // ===== Database =====
 builder.Services.AddDbContext<KhunghinhContext>(opt =>
