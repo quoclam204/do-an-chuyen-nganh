@@ -278,6 +278,42 @@ export default function Editor() {
     return () => { if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl) }
   }, [lastObjectUrl])
 
+  // Thêm hàm format thời gian
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return '';
+
+    const now = new Date();
+    const createdDate = new Date(dateString);
+    const diffMs = now.getTime() - createdDate.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    // Nếu tạo trong ngày (< 24 giờ)
+    if (diffDays === 0) {
+      if (diffHours > 0) {
+        return `${diffHours} giờ trước`;
+      } else if (diffMinutes > 0) {
+        return `${diffMinutes} phút trước`;
+      } else {
+        return diffSeconds > 0 ? `${diffSeconds} giây trước` : 'Vừa tạo';
+      }
+    }
+
+    // Nếu trong vòng 7 ngày
+    if (diffDays <= 7) {
+      return `${diffDays} ngày trước`;
+    }
+
+    // Lớn hơn 7 ngày: hiển thị ngày tháng năm
+    const day = createdDate.getDate().toString().padStart(2, '0');
+    const month = (createdDate.getMonth() + 1).toString().padStart(2, '0');
+    const year = createdDate.getFullYear();
+
+    return `${day}/${month}/${year}`;
+  };
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
 
@@ -544,40 +580,40 @@ export default function Editor() {
 
       {/* Thông tin người tạo khung */}
       {frame?.owner && (
-        <div className="flex flex-col items-center mb-4">
-          <img
-            src={frame.owner.avatar || '/icon/default-avatar.png'}
-            alt={frame.owner.name}
-            className="w-20 h-20 rounded-full object-cover border mb-2"
-          />
-          <div className="font-bold text-xl text-slate-900 mb-1 text-center">
-            {frame.owner.name}
-          </div>
-          {frame.ngayTao && (
-            <div className="flex items-center text-gray-500 text-base">
-              <svg
-                className="w-5 h-5 mr-1"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
-              </svg>
-              {(() => {
-                const days = Math.floor(
-                  (Date.now() - new Date(frame.ngayTao).getTime()) / (1000 * 60 * 60 * 24)
-                );
-                return `${days} ngày trước`;
-              })()}
+        <div className="mt-8 mb-6 flex flex-col items-center">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-sm w-full">
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={frame.owner.avatar || '/icon/default-avatar.png'}
+                alt={frame.owner.name}
+                className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 mb-3 shadow-sm"
+              />
+              <div className="font-bold text-lg text-slate-900 mb-2">
+                {frame.owner.name}
+              </div>
+              {frame.ngayTao && (
+                <div className="flex items-center text-gray-500 text-sm bg-gray-50 rounded-full px-3 py-1.5">
+                  <svg
+                    className="w-4 h-4 mr-1.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
+                  </svg>
+                  {formatTimeAgo(frame.ngayTao)}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
 
       {/* PHẦN CHIA SẺ */}
-      <div ref={shareRef} className="mt-8 flex flex-col items-center">
+      <div ref={shareRef} className="mt-6 flex flex-col items-center">
+
         <div className="mt-4 w-full max-w-[520px] rounded-xl border border-dashed border-gray-300 p-3">
           <div className="text-gray-600 font-medium mb-2 text-sm">Chia sẻ</div>
 

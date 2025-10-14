@@ -33,3 +33,4 @@ Deploy SQL (Azure SQL Database)
 2. Thêm package và using cho System.Drawing (FramesController)
 dotnet add package System.Drawing.Common
 
+TEST API: https://localhost:7090/api/frames/alias/quoclam2004

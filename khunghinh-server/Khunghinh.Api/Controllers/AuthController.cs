@@ -72,6 +72,15 @@ window.close();
                 _db.SaveChanges();
             }
 
+            // cập nhật ảnh đại diện của người dùng trong database mỗi khi họ đăng nhập bằng Google,
+            // đảm bảo avatar luôn mới nhất từ Google.
+            var avatar = User.FindFirst("picture")?.Value;
+            if (user != null && !string.IsNullOrEmpty(avatar))
+            {
+                user.AnhDaiDienUrl = avatar;
+                _db.SaveChanges();
+            }
+
             string? picture = User.Claims.FirstOrDefault(c => c.Type.Contains("picture"))?.Value;
 
             return Ok(new
