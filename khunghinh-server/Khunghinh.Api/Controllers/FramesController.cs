@@ -197,7 +197,13 @@ namespace Khunghinh.Api.Controllers
                     x.Id,
                     x.TieuDe,
                     x.Alias,
-                    x.UrlXemTruoc
+                    x.UrlXemTruoc,
+                    NgayDang = x.NgayDang, // Thêm dòng này
+                    owner = x.ChuSoHuu == null ? null : new {
+                        id = x.ChuSoHuu.Id,
+                        name = x.ChuSoHuu.TenHienThi,
+                        avatar = x.ChuSoHuu.AnhDaiDienUrl
+                    }
                 })
                 .FirstOrDefault();
 

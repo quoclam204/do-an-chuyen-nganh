@@ -88,8 +88,13 @@ export async function getFrameByAliasFromAPI(alias) {
       // ✅ Thêm BACKEND_ORIGIN cho URL đầy đủ, xử lý cả 2 format
       thumb: (data.UrlXemTruoc || data.urlXemTruoc) ? `${BACKEND_ORIGIN}${data.UrlXemTruoc || data.urlXemTruoc}` : null,
       overlay: (data.UrlXemTruoc || data.urlXemTruoc) ? `${BACKEND_ORIGIN}${data.UrlXemTruoc || data.urlXemTruoc}` : null,
-      id: data.Id || data.id
+      id: data.Id || data.id,
+
+      // Thêm owner và ngày tạo:
+      owner: data.owner || data.Owner || null,
+      ngayTao: data.NgayDang || data.ngayDang || null, // hoặc NgayDang nếu bạn dùng PascalCase
     }
+
 
     console.log(`🎯 Mapped data:`, mapped)
     return mapped
@@ -112,3 +117,7 @@ export async function getFrameByAlias(alias) {
 // giữ nguyên các hàm
 export function getFrames() { return Promise.resolve(FRAMES) }
 export function getTrending() { return Promise.resolve([...FRAMES].sort((a, b) => b.used24h - a.used24h)) }
+
+
+
+

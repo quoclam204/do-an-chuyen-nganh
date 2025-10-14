@@ -57,7 +57,7 @@ builder.Services
         options.ClientId = builder.Configuration["Auth:Google:ClientId"]!;
         options.ClientSecret = builder.Configuration["Auth:Google:ClientSecret"]!;
         options.CallbackPath = "/signin-google";   // Google Console: https://<api-domain>/signin-google
-        options.Scope.Add("profile");
+        options.Scope.Add("profile"); // lấy đường dẫn avatar từ Google
         options.Scope.Add("email");
         options.ClaimActions.MapJsonKey("picture", "picture", "url");
     });
