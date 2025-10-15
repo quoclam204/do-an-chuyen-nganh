@@ -253,5 +253,153 @@ namespace Khunghinh.Api.Controllers
             }
         }
 
+        // Tăng lượt tải và trả về thông tin khung hình
+        [HttpPost("view/{id:long}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ViewFrame(long id)
+        {
+            var frame = await _db.KhungHinhs.FirstOrDefaultAsync(x => x.Id == id && x.TrangThai == "dang_hoat_dong");
+            if (frame == null) return NotFound();
+
+            frame.LuotXem += 1;
+            await _db.SaveChangesAsync();
+
+            return Ok(new
+            {
+                frame.Id,
+                frame.TieuDe,
+                frame.Alias,
+                frame.UrlXemTruoc,
+                frame.LuotXem,
+                frame.LuotTai
+            });
+        }
+
+        // Tăng lượt tải
+        [HttpPost("download/{id:long}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> DownloadFrame(long id)
+        {
+            var frame = await _db.KhungHinhs.FirstOrDefaultAsync(x => x.Id == id && x.TrangThai == "dang_hoat_dong");
+            if (frame == null) return NotFound();
+
+            frame.LuotTai += 1;
+            await _db.SaveChangesAsync();
+
+            return Ok(new
+            {
+                frame.Id,
+                frame.TieuDe,
+                frame.Alias,
+                frame.UrlXemTruoc,
+                frame.LuotXem,
+                frame.LuotTai
+            });
+        }
+
+        // Xem Chi tiết khung hình theo ID
+        [HttpGet("{id:long}")]
+        [AllowAnonymous]
+        public IActionResult GetFrameDetail(long id)
+        {
+            var frame = _db.KhungHinhs
+                .Include(x => x.ChuSoHuu)
+                .Where(x => x.Id == id && x.TrangThai == "dang_hoat_dong")
+                .Select(x => new {
+                    x.Id,
+                    x.TieuDe,
+                    x.Alias,
+                    x.UrlXemTruoc,
+                    x.LuotXem,
+                    x.LuotTai,
+                    x.NgayDang,
+                    owner = x.ChuSoHuu == null ? null : new {
+                        id = x.ChuSoHuu.Id,
+                        name = x.ChuSoHuu.TenHienThi,
+                        avatar = x.ChuSoHuu.AnhDaiDienUrl
+                    }
+                })
+                .FirstOrDefault();
+
+            if (frame == null)
+                return NotFound();
+
+            return Ok(frame);
+        }
+
+
+        // Sửa khung hình
+        [HttpPost("update/{id:long}")]
+        [Authorize]
+        public async Task<IActionResult> Update(long id, [FromForm] string? title, [FromForm] string? alias, [FromForm] IFormFile? file)
+        {
+            try
+            {
+                // Lấy email user từ claims
+                string? userEmail =
+                    User.FindFirst(ClaimTypes.Email)?.Value ??
+                    User.FindFirst("email")?.Value ??
+                    User.FindFirst("preferred_username")?.Value;
+
+                var user = _db.NguoiDungs.FirstOrDefault(x => x.Email == userEmail);
+                if (user == null) return Unauthorized();
+
+                // Tìm khung hình thuộc về user
+                var frame = _db.KhungHinhs.FirstOrDefault(x => x.Id == id && x.ChuSoHuuId == user.Id);
+                if (frame == null) return NotFound("Không tìm thấy khung hình hoặc bạn không có quyền sửa.");
+
+                // Sửa tiêu đề
+                if (!string.IsNullOrWhiteSpace(title))
+                    frame.TieuDe = title;
+
+                // Sửa alias (nếu khác và không trùng)
+                if (!string.IsNullOrWhiteSpace(alias) && alias != frame.Alias)
+                {
+                    var exists = _db.KhungHinhs.Any(x => x.Alias == alias && x.Id != id);
+                    if (exists) return Conflict("Alias đã tồn tại");
+                    frame.Alias = alias;
+                }
+
+                // Sửa ảnh (nếu có file mới)
+                if (file != null && file.Length > 0)
+                {
+                    if (file.ContentType != "image/png" && !file.FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                        return BadRequest("Chỉ chấp nhận file PNG với nền trong suốt");
+                    if (file.Length > 2 * 1024 * 1024)
+                        return BadRequest("File không được vượt quá 2MB");
+
+                    // Xóa file cũ
+                    if (!string.IsNullOrWhiteSpace(frame.UrlXemTruoc))
+                    {
+                        var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                        var filePath = Path.Combine(webRoot, frame.UrlXemTruoc.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                        if (System.IO.File.Exists(filePath))
+                            System.IO.File.Delete(filePath);
+                    }
+
+                    // Lưu file mới
+                    var webRootNew = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                    var framesDir = Path.Combine(webRootNew, "frames");
+                    Directory.CreateDirectory(framesDir);
+                    var fileName = $"{Guid.NewGuid()}.png";
+                    var path = Path.Combine(framesDir, fileName);
+                    using (var stream = System.IO.File.Create(path))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
+                    frame.UrlXemTruoc = $"/frames/{fileName}";
+                }
+
+                frame.NgayChinhSua = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UpdateFrame] ERROR: {ex}");
+                return StatusCode(500, $"Lỗi server: {ex.Message}");
+            }
+        }
     }
 }
