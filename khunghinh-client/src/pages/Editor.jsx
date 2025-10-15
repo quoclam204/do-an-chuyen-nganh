@@ -4,6 +4,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { getFrameByAlias } from '../utils/frameService'
 import useImage from 'use-image'
 import { Stage, Layer, Image as KImage, Rect, Group, Text as KText, Circle } from 'react-konva'
+import NotFound from '../components/NotFound'
 
 const EXPORT_SIZE = 1080
 const PREVIEW_MAX = 500
@@ -108,6 +109,8 @@ export default function Editor() {
 
   const [frame, setFrame] = useState(null)
   const [frameError, setFrameError] = useState('')
+  const [frameLoading, setFrameLoading] = useState(true) // ✅ Thêm loading state
+
   const [userUrl, setUserUrl] = useState('')
 
   const [scale, setScale] = useState(1)
@@ -157,11 +160,26 @@ export default function Editor() {
     let alive = true
     setFrame(null)
     setFrameError('')
+    setFrameLoading(true) // ✅ Bắt đầu loading
 
-    // sẽ gọi API: -> chạy hàm GetByAlias(backend)
+    // Gọi API: -> chạy hàm GetByAlias(backend)
     getFrameByAlias(alias)
-      .then((f) => { if (alive) setFrame(f || null); if (alive && !f) setFrameError('Không tìm thấy khung cho alias này.') })
-      .catch(() => alive && setFrameError('Không tải được khung (overlay).'))
+      .then((f) => {
+        if (alive) {
+          setFrame(f || null)
+          if (!f) {
+            setFrameError('Không tìm thấy khung cho alias này.')
+          }
+          setFrameLoading(false) // ✅ Kết thúc loading
+        }
+      })
+      .catch(() => {
+        if (alive) {
+          setFrameError('Không tải được khung (overlay).')
+          setFrameLoading(false) // ✅ Kết thúc loading
+        }
+      })
+
     return () => { alive = false }
   }, [alias])
 
@@ -313,6 +331,27 @@ export default function Editor() {
 
     return `${day}/${month}/${year}`;
   };
+
+  // ✅ Hiển thị loading
+  if (frameLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          <p className="mt-4 text-gray-600">Đang tải khung...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ✅ Hiển thị 404 khi không tìm thấy khung
+  if (frameError && !frame) {
+    return (
+      <NotFound
+        message={`Không tìm thấy khung với alias "${alias}". Khung có thể đã bị xóa hoặc không tồn tại.`}
+      />
+    )
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">

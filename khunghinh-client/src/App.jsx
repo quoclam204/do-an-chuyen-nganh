@@ -15,6 +15,7 @@ import ScrollToTop from './components/ScrollToTop.jsx'
 import CreateFrame from './pages/CreateFrame'
 import FrameDetail from './pages/MyFrames.jsx'
 import MyFrames from './pages/MyFrames'
+import NotFound from './components/NotFound'
 
 export default function App() {
   return (
@@ -37,7 +38,9 @@ export default function App() {
             <Route path="/create-frame" element={<CreateFrame />} />
             <Route path="/frame/:id" element={<FrameDetail />} />
             <Route path="/my-frames" element={<MyFrames />} />
+            <Route path="*" element={<NotFound />} />   {/* ✅ Route 404 cho các đường dẫn không tồn tại */}
             <Route path="/:alias" element={<Editor />} />   {/* để cuối để không “ăn” /resize */}
+
           </Routes>
         </main>
 
@@ -46,3 +49,5 @@ export default function App() {
     </BrowserRouter>
   )
 }
+
+

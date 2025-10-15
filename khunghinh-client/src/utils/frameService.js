@@ -104,14 +104,18 @@ export async function getFrameByAliasFromAPI(alias) {
   }
 }
 
-// Cập nhật hàm getFrameByAlias để gọi API trước
+// Cập nhật hàm getFrameByAlias để trả về null thay vì khung mặc định
 export async function getFrameByAlias(alias) {
   // Thử API trước
   const apiResult = await getFrameByAliasFromAPI(alias)
   if (apiResult) return apiResult
 
   // Fallback về mock data
-  return Promise.resolve(FRAMES.find(f => f.alias === alias) || FRAMES[0])
+  const mockFrame = FRAMES.find(f => f.alias === alias)
+  if (mockFrame) return Promise.resolve(mockFrame)
+
+  // ✅ Trả về null thay vì FRAMES[0] khi không tìm thấy
+  return Promise.resolve(null)
 }
 
 // giữ nguyên các hàm
