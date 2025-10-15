@@ -427,3 +427,29 @@ input.slider-soft:disabled {
 .btn-remove-image {
   @apply absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 opacity-90 hover:opacity-100;
 }
+
+/* Thanh cuộn ngang tinh tế */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+  /* Độ dày */
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgba(59, 130, 246, 0.4);
+  /* màu xanh nhạt */
+  border-radius: 9999px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(59, 130, 246, 0.7);
+  /* đậm hơn khi hover */
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background-color: rgba(191, 219, 254, 0.2);
+  /* nền trong suốt nhẹ */
+}
+
+.scrollbar-thin {
+  scroll-behavior: smooth;
+}

@@ -104,6 +104,44 @@ export async function getFrameByAliasFromAPI(alias) {
   }
 }
 
+// Thêm hàm lấy khung công khai từ API
+export async function getPublicFramesFromAPI() {
+  try {
+    console.log(`🔍 Calling API: ${BACKEND_ORIGIN}/api/frames/public`)
+
+    const response = await fetch(`${BACKEND_ORIGIN}/api/frames/public`, {
+      credentials: 'include'
+    })
+
+    if (!response.ok) {
+      console.warn(`❌ API failed: ${response.status}`)
+      return null
+    }
+
+    const data = await response.json()
+    console.log(`📦 Public frames from API:`, data)
+
+    // Map dữ liệu từ backend
+    const mapped = data.map(item => ({
+      alias: item.Alias || item.alias,
+      name: item.TieuDe || item.tieuDe || 'Khung không tên',
+      thumb: (item.UrlXemTruoc || item.urlXemTruoc) ? `${BACKEND_ORIGIN}${item.UrlXemTruoc || item.urlXemTruoc}` : null,
+      overlay: (item.UrlXemTruoc || item.urlXemTruoc) ? `${BACKEND_ORIGIN}${item.UrlXemTruoc || item.urlXemTruoc}` : null,
+      id: item.Id || item.id,
+      owner: item.owner || item.Owner || null,
+      ngayTao: item.NgayDang || item.ngayDang || item.NgayTao || item.ngayTao || null,
+      campaign: 'a80', // Gắn campaign cho filter
+      featured: true, // Đánh dấu là nổi bật
+      used24h: Math.floor(Math.random() * 100) + 50 // Random views để sort
+    }))
+
+    return mapped
+  } catch (error) {
+    console.error('❌ Error fetching public frames:', error)
+    return null
+  }
+}
+
 // Cập nhật hàm getFrameByAlias để trả về null thay vì khung mặc định
 export async function getFrameByAlias(alias) {
   // Thử API trước
@@ -118,8 +156,21 @@ export async function getFrameByAlias(alias) {
   return Promise.resolve(null)
 }
 
+// Cập nhật hàm getFrames để ưu tiên API
+export async function getFrames() {
+  // Thử lấy từ API trước
+  const apiFrames = await getPublicFramesFromAPI()
+  if (apiFrames && apiFrames.length > 0) {
+    console.log('✅ Using frames from API')
+    return Promise.resolve(apiFrames)
+  }
+
+  // Fallback về mock data (giới hạn 10 khung)
+  console.log('⚠️ Fallback to mock data')
+  return Promise.resolve(FRAMES.slice(0, 10))
+}
+
 // giữ nguyên các hàm
-export function getFrames() { return Promise.resolve(FRAMES) }
 export function getTrending() { return Promise.resolve([...FRAMES].sort((a, b) => b.used24h - a.used24h)) }
 
 

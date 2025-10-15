@@ -67,6 +67,8 @@ export default function Home() {
     getFrames().then(setFrames)
   }, [])
 
+
+
   // Top 4 khung nổi bật (ưu tiên used24h)
   const featuredFrames = useMemo(() => {
     if (!frames?.length) return []
@@ -83,7 +85,7 @@ export default function Home() {
     return frames.filter(f =>
       (f.campaign && String(f.campaign).toLowerCase().includes('a80')) ||
       (Array.isArray(f.tags) && f.tags.some(t => String(t).toLowerCase().includes('a80')))
-    ).slice(0, 20);
+    ).slice(0, 10);
   }, [frames]);
 
   const tools = [
@@ -91,6 +93,22 @@ export default function Home() {
     { t: 'Thay đổi kích thước', d: 'Resize ảnh theo kích thước mong muốn', to: '/resize', icon: <Maximize2 className="w-6 h-6" /> },
     { t: 'Ảnh → PDF', d: 'Gộp nhiều ảnh thành một PDF', to: '/image-to-pdf', icon: <FileDown className="w-6 h-6" /> },
   ];
+
+  // Home.jsx – bên trong component Home(), đặt trước return
+  const isNew = (f) => {
+    // 1) back-end đã trả sẵn cờ
+    if (typeof f.isNew === 'boolean') return f.isNew;
+
+    // 2) tự tính: lấy trường thời gian có thể có
+    const iso =
+      f.ngayDang || f.NgayDang || f.ngayTao || f.NgayTao ||
+      f.createdAt || f.date;
+    if (!iso) return false;
+
+    const created = new Date(iso);
+    const hours = (Date.now() - created.getTime()) / 36e5;
+    return hours <= 24; // NEW trong 24h
+  };
 
 
 
@@ -166,7 +184,7 @@ export default function Home() {
                 <div className="text-[15px] font-semibold text-blue-700">Khung hình Đại hội Đảng</div>
               </div>
 
-              <div className="overflow-x-auto no-scrollbar thin-scrollbar">
+              <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-blue-400 scrollbar-track-blue-100 hover:scrollbar-thumb-blue-500">
                 <ul className="flex gap-4 min-w-max px-2 pb-2">
                   {a80Frames.map((f, i) => (
                     <li key={f.alias || i} className="shrink-0">
@@ -182,11 +200,19 @@ export default function Home() {
                             src={f.overlay || f.thumb}
                             alt={f.name || 'frame'}
                             className="max-w-full max-h-full object-contain select-none
-                         [image-rendering:auto] [image-rendering:-webkit-optimize-contrast]"
-                            width="512" height="512"      // hint kích thước giúp nội suy ảnh nét hơn
-                            decoding="async"
-                            loading="lazy"
+               [image-rendering:auto] [image-rendering:-webkit-optimize-contrast]"
+                            width="512" height="512" decoding="async" loading="lazy"
                           />
+
+                          {/* Nhãn NEW */}
+                          {isNew(f) && (
+                            <div className="absolute top-2 right-2 px-2 py-1 rounded-md
+                    bg-gradient-to-r from-rose-500 to-orange-500
+                    text-white text-xs font-bold shadow-md animate-pulse">
+                              NEW
+                            </div>
+                          )}
+
                           <div className="pointer-events-none absolute inset-0 ring-1 ring-black/5" />
                         </div>
                         {/* BỎ phần text/info bên dưới */}

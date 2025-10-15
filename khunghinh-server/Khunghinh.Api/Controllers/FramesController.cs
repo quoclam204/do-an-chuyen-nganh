@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace Khunghinh.Api.Controllers
@@ -187,6 +188,7 @@ namespace Khunghinh.Api.Controllers
             }
         }
 
+        // Khung hình theo alias 
         [HttpGet("alias/{alias}")]
         [AllowAnonymous]
         public IActionResult GetByAlias(string alias)
@@ -211,6 +213,44 @@ namespace Khunghinh.Api.Controllers
                 return NotFound();
 
             return Ok(frame);
+        }
+
+        // Lấy 10 khung công khai mới nhất và hiển thị trên web
+        [HttpGet("public")]
+        [AllowAnonymous]
+        public IActionResult GetPublicFrames()
+        {
+            try
+            {
+                var nowUtc = DateTime.UtcNow;
+                var frames = _db.KhungHinhs
+                    .Where(x => x.TrangThai == "dang_hoat_dong" && x.CheDoHienThi == "cong_khai")
+                    .OrderByDescending(x => x.NgayDang)
+                    .Take(10)
+                    .Select(x => new {
+                        x.Id,
+                        x.TieuDe,
+                        x.Alias,
+                        x.UrlXemTruoc,
+                        NgayDang = x.NgayDang, // để serializer xuất ISO-8601
+                        isNew = (nowUtc - x.NgayDang).TotalHours <= 24, // ⭐ cờ NEW
+                        owner = x.ChuSoHuu == null ? null : new
+                        {
+                            id = x.ChuSoHuu.Id,
+                            name = x.ChuSoHuu.TenHienThi,
+                            avatar = x.ChuSoHuu.AnhDaiDienUrl
+                        }
+                    })
+                    .AsNoTracking()
+                    .ToList();
+
+                return Ok(frames);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting public frames: {ex.Message}");
+                return StatusCode(500, "Lỗi server");
+            }
         }
 
     }
