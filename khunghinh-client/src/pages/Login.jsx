@@ -1,11 +1,11 @@
 // src/pages/Login.jsx
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X } from 'lucide-react'
+import { Shield, Chrome, Loader2, X } from 'lucide-react'
+import { authApi } from '../services/authApi'
 
-// Lấy domain API / SPA origin từ env (local hoặc deploy)
-// Tự chọn giá trị để chạy được cho cả local và deploy.
-const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
+// ✅ Sử dụng import.meta.env cho Vite
+const BACKEND_ORIGIN = (import.meta.env.VITE_API_URL || 'https://localhost:7090').replace(/\/$/, '')
 const SPA_ORIGIN = (import.meta.env.VITE_SPA_ORIGIN || window.location.origin).replace(/\/$/, '')
 
 // Component Login hiển thị modal đăng nhập
@@ -17,6 +17,7 @@ export default function Login({ onClose }) {
   const [me, setMe] = useState(() => {
     try { return JSON.parse(localStorage.getItem('kh_me') || 'null') } catch { return null }
   })
+  const [error, setError] = useState('')
 
   // ref: popupRef giữ cửa sổ popup Google, closeTimerRef để check popup đóng
   const popupRef = useRef(null)
@@ -25,34 +26,40 @@ export default function Login({ onClose }) {
   // Lắng nghe tín hiệu từ popup (AuthController callback)
   useEffect(() => {
     const onMsg = async (e) => {
-      console.log('message from', e.origin, e.data)
+      console.log('📨 Message from:', e.origin, e.data)
 
-      // chỉ xử lý nếu message gửi từ backend và nội dung = "auth:success"
-      if (e.origin !== new URL(BACKEND_ORIGIN).origin) return
+      const backendOrigin = new URL(BACKEND_ORIGIN).origin
+      if (e.origin !== backendOrigin) return
       if (e.data !== 'auth:success') return
 
       try {
-        // gọi API /api/auth/me để lấy thông tin user
-        const res = await fetch(`${BACKEND_ORIGIN}/api/auth/me`, {
-          credentials: 'include',
-        })
-        if (res.ok) {
-          const user = await res.json()
-          localStorage.setItem('kh_me', JSON.stringify(user)) // lưu user
-          setMe(user)             // cập nhật state               
-          window.dispatchEvent(new Event('kh_me_changed'))  // thông báo user đã thay đổi
-          closeModal()         // đóng modal
-        }
+        setLoading(true)
+        console.log('🔄 Getting user info...')
+
+        // ✅ Sử dụng authApi thay vì fetch trực tiếp
+        const user = await authApi.getMe()
+        console.log('✅ User info received:', user)
+
+        setMe(user)
+        closeModal()
+
+      } catch (error) {
+        console.error('❌ Failed to get user info:', error)
+        setError('Không thể lấy thông tin người dùng')
       } finally {
         setLoading(false)
         if (popupRef.current && !popupRef.current.closed) popupRef.current.close()
         popupRef.current = null
-        if (closeTimerRef.current) { clearInterval(closeTimerRef.current); closeTimerRef.current = null }
+        if (closeTimerRef.current) {
+          clearInterval(closeTimerRef.current)
+          closeTimerRef.current = null
+        }
       }
     }
 
     window.addEventListener('message', onMsg)
     document.body.style.overflow = 'hidden'
+
     return () => {
       window.removeEventListener('message', onMsg)
       document.body.style.overflow = 'auto'
@@ -77,40 +84,43 @@ export default function Login({ onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // Mở popup Google OAuth
-  const openGooglePopup = () => {
-    setLoading(true)
-    const w = 520, h = 620
-    const y = window.top.outerHeight / 2 + window.top.screenY - h / 2
-    const x = window.top.outerWidth / 2 + window.top.screenX - w / 2
+  // ✅ Sử dụng authApi.loginWithGoogle thay vì openGooglePopup tự viết
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true)
+      setError('')
 
-    const url = `${BACKEND_ORIGIN}/api/auth/google`
-    popupRef.current = window.open(url, 'google_oauth', `width=${w},height=${h},left=${x},top=${y}`)
+      console.log('🚀 Starting Google OAuth...')
 
-    if (!popupRef.current || popupRef.current.closed) {
-      window.location.href = url
-      return
+      // Sử dụng authApi để mở popup
+      await authApi.loginWithGoogle()
+      console.log('✅ OAuth popup completed')
+
+      // Lấy thông tin user từ ClaimsTransformer
+      const user = await authApi.getMe()
+      console.log('✅ User info received:', user)
+
+      setMe(user)
+      closeModal()
+
+    } catch (error) {
+      console.error('❌ Login error:', error)
+      setError(error.message || 'Đăng nhập thất bại. Vui lòng thử lại.')
+    } finally {
+      setLoading(false)
     }
-
-    closeTimerRef.current = setInterval(() => {
-      if (popupRef.current && popupRef.current.closed) {
-        setLoading(false)
-        clearInterval(closeTimerRef.current)
-        closeTimerRef.current = null
-      }
-    }, 500)
   }
 
-  // Hàm logout: gọi API /api/auth/logout, xóa user, đóng modal
+  // ✅ Sử dụng authApi.logout
   const logout = async () => {
-    await fetch(`${BACKEND_ORIGIN}/api/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-    })
-    localStorage.removeItem('kh_me')
-    setMe(null)
-    window.dispatchEvent(new Event('kh_me_changed'))
-    closeModal()
+    try {
+      await authApi.logout()
+      setMe(null)
+      closeModal()
+    } catch (error) {
+      console.error('❌ Logout error:', error)
+      setError('Đăng xuất thất bại')
+    }
   }
 
   // Render modal
@@ -133,38 +143,69 @@ export default function Login({ onClose }) {
 
           <div className="p-6 pt-10">
             {!me ? (
-              <button
-                type="button"
-                onClick={openGooglePopup}
-                disabled={loading}
-                className="mx-auto block w-[360px] max-w-full overflow-hidden rounded-md shadow
-                           text-white font-medium transition active:scale-[0.99]
-                           bg-blue-600 hover:bg-blue-700 disabled:opacity-70"
-              >
-                <div className="flex items-center">
-                  <div className="flex items-center justify-center w-14 h-12 bg-blue-700">
-                    <span className="font-bold text-lg leading-none">G</span>
-                  </div>
-                  <div className="flex-1 text-center text-sm sm:text-base">
-                    {loading ? 'Đang mở Google…' : 'Đăng nhập qua Google'}
-                  </div>
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
+                  <Shield className="w-8 h-8 text-white" />
                 </div>
-              </button>
+                <h1 className="text-2xl font-bold text-slate-900">Đăng nhập</h1>
+                <p className="text-sm text-slate-600 mt-2 mb-6">
+                  Đăng nhập để sử dụng đầy đủ tính năng TrendyFrame
+                </p>
+
+                {/* Error */}
+                {error && (
+                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="text-sm text-red-600">{error}</p>
+                  </div>
+                )}
+
+                {/* Google Login Button */}
+                <button
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-3 bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Chrome className="w-5 h-5" />
+                  )}
+                  {loading ? 'Đang đăng nhập...' : 'Đăng nhập bằng Google'}
+                </button>
+
+                {/* Footer */}
+                <div className="mt-6">
+                  <p className="text-xs text-slate-500">
+                    Bằng việc đăng nhập, bạn đồng ý với{' '}
+                    <a href="/terms" className="text-blue-600 hover:underline">Điều khoản</a>{' '}
+                    và{' '}
+                    <a href="/privacy" className="text-blue-600 hover:underline">Chính sách bảo mật</a>
+                  </p>
+                </div>
+              </div>
             ) : (
-              <div className="space-y-3 text-center">
+              <div className="space-y-4 text-center">
                 <div className="text-sm text-gray-500">Bạn đã đăng nhập</div>
-                <div className="font-medium">{me.name}</div>
-                <div className="text-sm">{me.email}</div>
+                <div className="space-y-2">
+                  <div className="font-medium">{me.name || me.tenHienThi}</div>
+                  <div className="text-sm text-gray-600">{me.email}</div>
+                  {me.vaiTro && (
+                    <div className={`text-xs font-medium ${me.vaiTro === 'admin' ? 'text-purple-600' : 'text-blue-600'
+                      }`}>
+                      {me.vaiTro === 'admin' ? '👑 Quản trị viên' : me.vaiTro}
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-2 pt-2">
                   <button
                     onClick={logout}
-                    className="w-full border rounded py-2 hover:bg-gray-50"
+                    className="flex-1 border border-gray-300 rounded-lg py-2 hover:bg-gray-50 transition"
                   >
                     Đăng xuất
                   </button>
                   <button
                     onClick={closeModal}
-                    className="w-full bg-blue-600 text-white rounded py-2 hover:bg-blue-700"
+                    className="flex-1 bg-blue-600 text-white rounded-lg py-2 hover:bg-blue-700 transition"
                   >
                     Đóng
                   </button>
@@ -174,10 +215,6 @@ export default function Login({ onClose }) {
           </div>
         </div>
       </div>
-
-      <style>
-        {`.shadow-xl{box-shadow:0 20px 25px -5px rgba(0,0,0,.1),0 8px 10px -6px rgba(0,0,0,.1)}`}
-      </style>
     </div>
   )
 }

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Menu, X, ChevronDown, User, Image, LogOut } from 'lucide-react'
+import { Menu, X, ChevronDown, User, Image, LogOut, RefreshCw } from 'lucide-react'
 import Login from '../pages/Login'
+import { authApi } from '../services/authApi'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
@@ -9,6 +10,7 @@ export default function Navbar() {
   const [me, setMe] = useState(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
+  const [refreshing, setRefreshing] = useState(false) // ✅ Thêm loading state
   const dropdownRef = useRef(null)
   const location = useLocation()
   const navigate = useNavigate()
@@ -18,14 +20,53 @@ export default function Navbar() {
     try { return JSON.parse(localStorage.getItem('kh_me') || 'null') } catch { return null }
   }
 
-  // mount + đổi route → đồng bộ me
-  useEffect(() => { setMe(readMe()) }, [location.pathname])
+  // ✅ Verify và refresh thông tin user với API
+  const refreshUserInfo = async () => {
+    try {
+      setRefreshing(true)
+      const user = await authApi.getMe()
+      setMe(user)
+      console.log('✅ User info refreshed:', user)
+    } catch (error) {
+      console.error('❌ Failed to refresh user info:', error)
+      // Xóa thông tin cũ nếu không thể verify
+      setMe(null)
+      localStorage.removeItem('kh_me')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  // ✅ Mount: Đọc localStorage trước, sau đó verify với API
+  useEffect(() => {
+    const localUser = readMe()
+    setMe(localUser)
+
+    // Nếu có user trong localStorage, verify với server
+    if (localUser) {
+      refreshUserInfo()
+    }
+  }, [])
+
+  // đổi route → đồng bộ me từ localStorage (nhanh)
+  useEffect(() => {
+    const localUser = readMe()
+    if (JSON.stringify(localUser) !== JSON.stringify(me)) {
+      setMe(localUser)
+    }
+  }, [location.pathname])
 
   // lắng nghe thay đổi từ Login.jsx (custom event) & từ tab khác (storage)
   useEffect(() => {
-    const sync = () => setMe(readMe())
+    const sync = () => {
+      const localUser = readMe()
+      setMe(localUser)
+      console.log('🔄 User synced from event:', localUser)
+    }
+
     window.addEventListener('kh_me_changed', sync)
     window.addEventListener('storage', sync)
+
     return () => {
       window.removeEventListener('kh_me_changed', sync)
       window.removeEventListener('storage', sync)
@@ -46,16 +87,15 @@ export default function Navbar() {
     setDropdownOpen(false)
   }, [location.pathname])
 
-
-  // 🔍 DEBUG 1: Kiểm tra dữ liệu user mỗi khi thay đổi
+  // 🔍 DEBUG: Kiểm tra dữ liệu user
   useEffect(() => {
     console.log('=== DEBUG USER DATA ===')
-    console.log('localStorage:', JSON.parse(localStorage.getItem('kh_me')))
+    console.log('localStorage:', readMe())
     console.log('me state:', me)
     console.log('vaiTro:', me?.vaiTro)
     console.log('email:', me?.email)
 
-    const isAdmin = me?.vaiTro === "admin" // ✅ Dựa trên database
+    const isAdmin = me?.vaiTro === "admin" // ✅ Dựa trên ClaimsTransformer từ API
     console.log('isAdmin:', isAdmin)
   }, [me])
 
@@ -83,17 +123,26 @@ export default function Navbar() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  const handleLogout = () => {
-    localStorage.removeItem('kh_me')
-    window.dispatchEvent(new Event('kh_me_changed')) // báo các component khác
-    setMe(null)
-    setDropdownOpen(false)
-    navigate('/')
+  // ✅ Logout với API thực
+  const handleLogout = async () => {
+    try {
+      await authApi.logout() // Gọi API logout
+      setMe(null)
+      setDropdownOpen(false)
+      navigate('/')
+      console.log('✅ Logout successful')
+    } catch (error) {
+      console.error('❌ Logout error:', error)
+      // Vẫn clear local data dù API có lỗi
+      setMe(null)
+      setDropdownOpen(false)
+      navigate('/')
+    }
   }
 
-  const name = me?.name || 'User'
+  const name = me?.name || me?.tenHienThi || 'User'
 
-  // ✅ Logic phân quyền dựa trên database
+  // ✅ Logic phân quyền dựa trên ClaimsTransformer
   const isAdmin = me?.vaiTro === "admin"
   const isLoggedIn = !!me
 
@@ -125,19 +174,22 @@ export default function Navbar() {
             <NavLink to="/trending" className="hover:text-blue-600 transition">Xu hướng</NavLink>
 
             {/* Chỉ hiện khi đã đăng nhập */}
-            {me && (
+            {isLoggedIn && (
               <NavLink to="/create-frame" className="hover:text-blue-600 transition">Tạo khung</NavLink>
             )}
 
-            {/* Chỉ hiện khi là admin */}
+            {/* Chỉ hiện khi là admin (từ ClaimsTransformer) */}
             {isAdmin && (
-              <NavLink to="/admin" className="hover:text-blue-600 transition text-purple-600 font-medium">
-                Quản trị
+              <NavLink
+                to="/admin"
+                className="hover:text-purple-700 transition text-purple-600 font-semibold flex items-center gap-1"
+              >
+                👑 Quản trị
               </NavLink>
             )}
 
             {/* Nút đăng nhập hoặc dropdown user */}
-            {!me ? (
+            {!isLoggedIn ? (
               <button
                 onClick={() => setLoginModalOpen(true)}
                 className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition"
@@ -160,24 +212,37 @@ export default function Navbar() {
                       e.currentTarget.src = '/frames/icon/default-avatar.png'
                     }}
                   />
-                  <ChevronDown
-                    size={16}
-                    className={`text-gray-600 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
-                  />
+                  {/* ✅ Loading indicator khi refresh */}
+                  {refreshing ? (
+                    <RefreshCw size={16} className="text-blue-600 animate-spin" />
+                  ) : (
+                    <ChevronDown
+                      size={16}
+                      className={`text-gray-600 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
+                    />
+                  )}
                 </button>
 
                 {/* Dropdown Menu */}
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                     {/* Tam giác nhỏ */}
                     <div className="absolute -top-2 right-4 w-4 h-4 bg-white border-l border-t border-gray-200 rotate-45"></div>
 
-                    {/* Menu Items */}
-                    <div className="px-4 py-2 border-b border-gray-100">
+                    {/* User Info Header */}
+                    <div className="px-4 py-3 border-b border-gray-100">
                       <div className="font-medium text-gray-900">{name}</div>
-                      {/* <div className="text-sm text-gray-500">{me?.email}</div> */}
+                      <div className="text-sm text-gray-500">{me?.email}</div>
+                      {/* ✅ Hiển thị role từ ClaimsTransformer */}
+                      {me?.vaiTro && (
+                        <div className={`text-xs font-medium mt-1 ${me.vaiTro === 'admin' ? 'text-purple-600' : 'text-blue-600'
+                          }`}>
+                          {me.vaiTro === 'admin' ? '👑 Quản trị viên' : `📝 ${me.vaiTro}`}
+                        </div>
+                      )}
                     </div>
 
+                    {/* Menu Items */}
                     <Link
                       to="/profile"
                       className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
@@ -193,8 +258,35 @@ export default function Navbar() {
                       onClick={() => setDropdownOpen(false)}
                     >
                       <Image size={16} />
-                      <span>Khung hình</span>
+                      <span>Khung hình của tôi</span>
                     </Link>
+
+                    {/* ✅ Admin link trong dropdown nếu là admin */}
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        className="flex items-center gap-3 px-4 py-2 text-purple-600 hover:bg-purple-50 transition"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        <span className="text-sm">👑</span>
+                        <span>Trang quản trị</span>
+                      </Link>
+                    )}
+
+                    {/* ✅ Refresh button */}
+                    <button
+                      onClick={async () => {
+                        setDropdownOpen(false)
+                        await refreshUserInfo()
+                      }}
+                      disabled={refreshing}
+                      className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition w-full text-left disabled:opacity-50"
+                    >
+                      <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+                      <span>Làm mới thông tin</span>
+                    </button>
+
+                    <hr className="my-2" />
 
                     <button
                       onClick={handleLogout}
@@ -229,24 +321,24 @@ export default function Navbar() {
             className="md:hidden px-6 pb-5 pt-2 space-y-4 bg-white/95 supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:backdrop-blur-md border-t border-gray-200"
           >
             {/* Luôn hiển thị */}
-            <NavLink onClick={() => setOpen(false)} to="/tools" className="block text-gray-800">
+            <NavLink onClick={() => setOpen(false)} to="/tools" className="block text-gray-800 py-2">
               Công cụ
             </NavLink>
-            <NavLink onClick={() => setOpen(false)} to="/trending" className="block text-gray-800">
+            <NavLink onClick={() => setOpen(false)} to="/trending" className="block text-gray-800 py-2">
               Xu hướng
             </NavLink>
 
             {/* Chỉ hiển thị khi đăng nhập */}
             {isLoggedIn && (
-              <NavLink onClick={() => setOpen(false)} to="/" className="block text-gray-800">
+              <NavLink onClick={() => setOpen(false)} to="/create-frame" className="block text-gray-800 py-2">
                 Tạo khung
               </NavLink>
             )}
 
             {/* Chỉ hiển thị khi là admin */}
             {isAdmin && (
-              <NavLink onClick={() => setOpen(false)} to="/admin" className="block text-purple-600 font-medium">
-                Quản trị
+              <NavLink onClick={() => setOpen(false)} to="/admin" className="block text-purple-600 font-semibold py-2">
+                👑 Quản trị
               </NavLink>
             )}
 
@@ -261,13 +353,28 @@ export default function Navbar() {
                 Đăng nhập
               </button>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 pt-3">
+                {/* ✅ User info với role */}
                 <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
-                  <img src={avatarUrl} alt="avatar" className="w-10 h-10 rounded-full border object-cover" />
-                  <div>
-                    <div className="font-medium text-gray-900">{name}</div>
-                    <div className="text-sm text-gray-500">{me?.email}</div>
+                  <img src={avatarUrl} alt="avatar" className="w-12 h-12 rounded-full border object-cover" referrerPolicy="no-referrer" />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-gray-900 truncate">{name}</div>
+                    <div className="text-sm text-gray-500 truncate">{me?.email}</div>
+                    {me?.vaiTro && (
+                      <div className={`text-xs font-medium ${me.vaiTro === 'admin' ? 'text-purple-600' : 'text-blue-600'
+                        }`}>
+                        {me.vaiTro === 'admin' ? '👑 Quản trị viên' : me.vaiTro}
+                      </div>
+                    )}
                   </div>
+                  {/* ✅ Refresh button mobile */}
+                  <button
+                    onClick={refreshUserInfo}
+                    disabled={refreshing}
+                    className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                  >
+                    <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+                  </button>
                 </div>
 
                 <Link to="/profile" onClick={() => setOpen(false)} className="flex items-center gap-3 text-gray-700 py-2">
@@ -277,10 +384,10 @@ export default function Navbar() {
 
                 <Link to="/my-frames" onClick={() => setOpen(false)} className="flex items-center gap-3 text-gray-700 py-2">
                   <Image size={16} />
-                  <span>Khung hình</span>
+                  <span>Khung hình của tôi</span>
                 </Link>
 
-                <button onClick={handleLogout} className="flex items-center gap-3 text-red-600 py-2">
+                <button onClick={handleLogout} className="flex items-center gap-3 text-red-600 py-2 w-full text-left">
                   <LogOut size={16} />
                   <span>Đăng xuất</span>
                 </button>

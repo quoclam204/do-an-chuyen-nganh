@@ -63,6 +63,7 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddScoped<IClaimsTransformation, Khunghinh.Api.Services.ClaimsTransformer>();
 
 var app = builder.Build();
 
