@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'https://localhost:7090'
+const API_BASE = import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090'
 
 class AdminApiService {
     async request(endpoint, options = {}) {
