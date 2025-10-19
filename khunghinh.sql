@@ -5,7 +5,7 @@
 GO */
 
 -- Azure target
-USE [khunghinh];
+USE [KhunghinhDb];
 GO
 
 /* 0) DROP trigger nếu có */
@@ -226,7 +226,7 @@ BEGIN
 END;
 GO
 
-USE [khunghinh];
+USE [KhunghinhDb];
 GO
 
 /* ========== Người dùng ========== */
@@ -513,4 +513,6 @@ SELECT TOP 10 * FROM dbo.NguoiDung ORDER BY NgayCapNhat DESC;
 SELECT COUNT(*) AS TotalAdmins FROM dbo.NguoiDung WHERE VaiTro = N'admin';
 SELECT COUNT(*) AS TotalSuper FROM dbo.NguoiDung WHERE IsSuperAdmin = 1;
 
-
+/*
+DELETE FROM dbo.NguoiDung
+WHERE Email IN (N'user1@gmail.com', N'user2@gmail.com', N'admin@gmail.com'); */
