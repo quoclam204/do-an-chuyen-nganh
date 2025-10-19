@@ -21,6 +21,9 @@ public partial class NguoiDung
 
     public DateTime? NgayCapNhat { get; set; }
 
+    // ✅ cột mới
+    public bool IsSuperAdmin { get; set; }
+
     public virtual ICollection<BaoCaoViPham> BaoCaoViPhams { get; set; } = new List<BaoCaoViPham>();
 
     public virtual ICollection<DangNhapNgoai> DangNhapNgoais { get; set; } = new List<DangNhapNgoai>();

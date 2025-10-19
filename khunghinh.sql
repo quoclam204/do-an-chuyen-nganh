@@ -323,3 +323,194 @@ GO
 SELECT * FROM NguoiDung
 
 SELECT * FROM NguoiDung WHERE Email = 'nguyenlequoclam@gmail.com';
+
+-- 1.1) Thêm cột IsSuperAdmin nếu chưa có
+IF COL_LENGTH('dbo.NguoiDung', 'IsSuperAdmin') IS NULL
+BEGIN
+  ALTER TABLE dbo.NguoiDung
+  ADD IsSuperAdmin BIT NOT NULL CONSTRAINT DF_ND_IsSuperAdmin DEFAULT 0;
+END
+GO
+
+-- 1.2) (khuyến nghị) Index cho các truy vấn lọc theo vai trò/trạng thái
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ND_VaiTro_TrangThai' AND object_id = OBJECT_ID('dbo.NguoiDung'))
+  CREATE INDEX IX_ND_VaiTro_TrangThai ON dbo.NguoiDung(VaiTro, TrangThai);
+GO
+
+UPDATE dbo.NguoiDung
+SET IsSuperAdmin = 1, VaiTro = N'admin', TrangThai = N'hoat_dong', NgayCapNhat = SYSUTCDATETIME()
+WHERE Email = N'nguyenlequoclam@gmail.com';
+GO
+
+/* 3.1) Cấm thay đổi quyền/trạng thái của Super Admin */
+CREATE OR ALTER TRIGGER dbo.trg_ND_ProtectSuperAdmin
+ON dbo.NguoiDung
+AFTER UPDATE
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN deleted  d ON i.Id = d.Id
+    WHERE d.IsSuperAdmin = 1
+      AND (
+           i.IsSuperAdmin <> 1            -- gỡ super
+        OR i.VaiTro <> d.VaiTro           -- đổi 'admin' -> 'user' hoặc ngược lại
+        OR i.TrangThai <> N'hoat_dong'    -- khoá/xoá mềm super
+      )
+  )
+  BEGIN
+    RAISERROR (N'Không được phép thay đổi Super Admin.', 16, 1);
+    ROLLBACK TRANSACTION;
+    RETURN;
+  END
+END;
+GO
+
+/* 3.2) Luôn đảm bảo hệ thống còn ít nhất 1 Super Admin */
+CREATE OR ALTER TRIGGER dbo.trg_ND_EnsureAtLeastOneSuper
+ON dbo.NguoiDung
+AFTER UPDATE, DELETE
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  IF NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WHERE IsSuperAdmin = 1)
+  BEGIN
+    RAISERROR (N'Phải luôn có ít nhất 1 Super Admin.', 16, 1);
+    ROLLBACK TRANSACTION;
+    RETURN;
+  END
+END;
+GO
+
+/*View tiện ích (xem nhanh danh sách quản trị)*/
+CREATE OR ALTER VIEW dbo.v_Admins
+AS
+SELECT Id, Email, TenHienThi, VaiTro, IsSuperAdmin, TrangThai, NgayTao, NgayCapNhat
+FROM dbo.NguoiDung
+WHERE IsSuperAdmin = 1 OR VaiTro = N'admin';
+GO
+
+/*Thăng user thành admin*/
+CREATE OR ALTER PROCEDURE dbo.sp_PromoteToAdmin
+  @ActorId  BIGINT,
+  @TargetId BIGINT
+AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @actorIsSuper BIT, @targetIsSuper BIT;
+
+  SELECT @actorIsSuper = IsSuperAdmin FROM dbo.NguoiDung WHERE Id = @ActorId;
+  SELECT @targetIsSuper = IsSuperAdmin FROM dbo.NguoiDung WHERE Id = @TargetId;
+
+  IF ISNULL(@actorIsSuper, 0) = 0
+    RAISERROR (N'Chỉ Super Admin được thăng quyền.', 16, 1);
+  ELSE IF ISNULL(@targetIsSuper, 0) = 1
+    RAISERROR (N'Không thao tác lên Super Admin.', 16, 1);
+  ELSE
+    UPDATE dbo.NguoiDung SET VaiTro = N'admin', NgayCapNhat = SYSUTCDATETIME() WHERE Id = @TargetId;
+END;
+GO
+
+/*5.2) Hạ admin về user*/
+CREATE OR ALTER PROCEDURE dbo.sp_DemoteToUser
+  @ActorId  BIGINT,
+  @TargetId BIGINT
+AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @actorIsSuper BIT, @targetIsSuper BIT, @targetRole NVARCHAR(10);
+
+  SELECT @actorIsSuper = IsSuperAdmin FROM dbo.NguoiDung WHERE Id = @ActorId;
+  SELECT @targetIsSuper = IsSuperAdmin, @targetRole = VaiTro FROM dbo.NguoiDung WHERE Id = @TargetId;
+
+  IF ISNULL(@actorIsSuper, 0) = 0
+    RAISERROR (N'Chỉ Super Admin được hạ quyền.', 16, 1);
+  ELSE IF ISNULL(@targetIsSuper, 0) = 1
+    RAISERROR (N'Không thao tác lên Super Admin.', 16, 1);
+  ELSE IF @targetRole <> N'admin'
+    RAISERROR (N'Chỉ hạ quyền tài khoản admin.', 16, 1);
+  ELSE
+    UPDATE dbo.NguoiDung SET VaiTro = N'user', NgayCapNhat = SYSUTCDATETIME() WHERE Id = @TargetId;
+END;
+GO
+
+/*5.3) Khoá / mở khoá tài khoản*/
+CREATE OR ALTER PROCEDURE dbo.sp_LockUser
+  @ActorId  BIGINT,
+  @TargetId BIGINT
+AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @actorIsSuper BIT, @targetIsSuper BIT, @targetRole NVARCHAR(10);
+
+  SELECT @actorIsSuper = IsSuperAdmin FROM dbo.NguoiDung WHERE Id = @ActorId;
+  SELECT @targetIsSuper = IsSuperAdmin, @targetRole = VaiTro FROM dbo.NguoiDung WHERE Id = @TargetId;
+
+  IF ISNULL(@targetIsSuper, 0) = 1
+    RAISERROR (N'Không khoá Super Admin.', 16, 1);
+  ELSE IF @targetRole = N'admin' AND ISNULL(@actorIsSuper, 0) = 0
+    RAISERROR (N'Chỉ Super Admin được khoá admin.', 16, 1);
+  ELSE
+    UPDATE dbo.NguoiDung SET TrangThai = N'khoa', NgayCapNhat = SYSUTCDATETIME() WHERE Id = @TargetId;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_UnlockUser
+  @ActorId  BIGINT,
+  @TargetId BIGINT
+AS
+BEGIN
+  SET NOCOUNT ON;
+  UPDATE dbo.NguoiDung SET TrangThai = N'hoat_dong', NgayCapNhat = SYSUTCDATETIME() WHERE Id = @TargetId;
+END;
+GO
+
+/*5.4) Cấp / bỏ cờ Super Admin (chỉ gọi khi thật cần thiết)*/
+CREATE OR ALTER PROCEDURE dbo.sp_SetSuperAdmin
+  @ActorId      BIGINT,
+  @TargetId     BIGINT,
+  @IsSuperAdmin BIT
+AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @actorIsSuper BIT;
+
+  SELECT @actorIsSuper = IsSuperAdmin FROM dbo.NguoiDung WHERE Id = @ActorId;
+
+  IF ISNULL(@actorIsSuper, 0) = 0
+    RAISERROR (N'Chỉ Super Admin được cấp/bỏ Super Admin.', 16, 1);
+  ELSE
+  BEGIN
+    UPDATE dbo.NguoiDung
+    SET IsSuperAdmin = @IsSuperAdmin, VaiTro = N'admin', NgayCapNhat = SYSUTCDATETIME()
+    WHERE Id = @TargetId;
+
+    -- Sau UPDATE, trigger trg_ND_EnsureAtLeastOneSuper vẫn bảo vệ không cho hệ thống mất sạch Super Admin
+  END
+END;
+GO
+
+-- Xem danh sách quản trị
+SELECT * FROM dbo.v_Admins;
+
+-- Thử thăng quyền bởi Super Admin
+-- EXEC dbo.sp_PromoteToAdmin  @ActorId =  <Id_Super>, @TargetId = <Id_User>;
+
+-- Thử hạ quyền bởi admin thường (kỳ vọng lỗi)
+-- EXEC dbo.sp_DemoteToUser    @ActorId =  <Id_AdminThuong>, @TargetId = <Id_AdminKhac>;
+
+-- Kiểm tra bản ghi của user cụ thể
+SELECT * FROM dbo.NguoiDung WHERE Email = N'nguyenlequoclam@gmail.com';
+
+-- Kiểm tra 10 bản ghi mới cập nhật nhất
+SELECT TOP 10 * FROM dbo.NguoiDung ORDER BY NgayCapNhat DESC;
+
+-- Kiểm tra số lượng admin / superadmin
+SELECT COUNT(*) AS TotalAdmins FROM dbo.NguoiDung WHERE VaiTro = N'admin';
+SELECT COUNT(*) AS TotalSuper FROM dbo.NguoiDung WHERE IsSuperAdmin = 1;
+
+
