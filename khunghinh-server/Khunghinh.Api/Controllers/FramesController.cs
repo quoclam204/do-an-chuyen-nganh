@@ -69,6 +69,11 @@ namespace Khunghinh.Api.Controllers
                     if (exists) return Conflict("Alias đã tồn tại");
                 }
 
+                var vietnamTime = TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime.UtcNow, 
+                    TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")
+                );
+
                 var khung = new KhungHinh
                 {
                     ChuSoHuuId = user.Id,
@@ -78,7 +83,7 @@ namespace Khunghinh.Api.Controllers
                     CheDoHienThi = "cong_khai",
                     TrangThai = "dang_hoat_dong",
                     UrlXemTruoc = $"/frames/{fileName}",
-                    NgayDang = DateTime.UtcNow
+                    NgayDang = vietnamTime
                 };
 
                 _db.KhungHinhs.Add(khung);
@@ -390,7 +395,11 @@ namespace Khunghinh.Api.Controllers
                     frame.UrlXemTruoc = $"/frames/{fileName}";
                 }
 
-                frame.NgayChinhSua = DateTime.UtcNow;
+                var vietnamTime = TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime.UtcNow, 
+                    TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")
+                );
+                frame.NgayChinhSua = vietnamTime;
                 await _db.SaveChangesAsync();
 
                 return Ok(new { success = true });
