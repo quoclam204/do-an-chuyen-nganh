@@ -205,8 +205,11 @@ namespace Khunghinh.Api.Controllers
                     x.TieuDe,
                     x.Alias,
                     x.UrlXemTruoc,
-                    NgayDang = x.NgayDang, // Thêm dòng này
-                    owner = x.ChuSoHuu == null ? null : new {
+                    x.NgayDang,
+                    x.LuotXem,  // ✅ Thêm
+                    x.LuotTai,  // ✅ Thêm
+                    owner = x.ChuSoHuu == null ? null : new
+                    {
                         id = x.ChuSoHuu.Id,
                         name = x.ChuSoHuu.TenHienThi,
                         avatar = x.ChuSoHuu.AnhDaiDienUrl

@@ -142,18 +142,52 @@ export async function getPublicFramesFromAPI() {
   }
 }
 
-// Cập nhật hàm getFrameByAlias để trả về null thay vì khung mặc định
+// ✅ Hợp nhất thành 1 hàm duy nhất
 export async function getFrameByAlias(alias) {
-  // Thử API trước
-  const apiResult = await getFrameByAliasFromAPI(alias)
-  if (apiResult) return apiResult
+  try {
+    console.log(`🔍 Calling API: ${BACKEND_ORIGIN}/api/Frames/alias/${alias}`)
 
-  // Fallback về mock data
-  const mockFrame = FRAMES.find(f => f.alias === alias)
-  if (mockFrame) return Promise.resolve(mockFrame)
+    const res = await fetch(`${BACKEND_ORIGIN}/api/Frames/alias/${alias}`, {
+      credentials: 'include'
+    })
 
-  // ✅ Trả về null thay vì FRAMES[0] khi không tìm thấy
-  return Promise.resolve(null)
+    console.log(`📡 Response status: ${res.status}`)
+
+    if (!res.ok) {
+      if (res.status === 404) return null
+      throw new Error(`HTTP ${res.status}`)
+    }
+
+    const data = await res.json()
+    console.log(`📦 Raw backend data:`, data)
+
+    // ✅ Tạo URL đầy đủ
+    const imageUrl = data.urlXemTruoc ?? data.UrlXemTruoc
+    const fullImageUrl = imageUrl ? `${BACKEND_ORIGIN}${imageUrl}` : null
+
+    const mapped = {
+      id: data.id ?? data.Id,
+      name: data.tieuDe ?? data.TieuDe,
+      alias: data.alias ?? data.Alias,
+      overlay: fullImageUrl,
+      thumb: fullImageUrl,
+      ngayTao: data.ngayDang ?? data.NgayDang,
+      clicks: data.luotXem ?? data.LuotXem ?? 0,
+      uses: data.luotTai ?? data.LuotTai ?? 0,
+      owner: data.owner ? {
+        id: data.owner.id ?? data.owner.Id,
+        name: data.owner.name ?? data.owner.Name,
+        avatar: data.owner.avatar ?? data.owner.Avatar
+      } : null
+    }
+
+    console.log(`🎯 Mapped data:`, mapped)
+    return mapped
+
+  } catch (error) {
+    console.error('❌ API Error:', error)
+    return null
+  }
 }
 
 // Cập nhật hàm getFrames để ưu tiên API
