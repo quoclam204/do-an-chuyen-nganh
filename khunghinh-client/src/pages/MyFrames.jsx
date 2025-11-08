@@ -352,7 +352,8 @@ export default function MyFrames() {
                                         <tr key={f.id} className="hover:bg-blue-50/40 transition-colors">
                                             <td className="py-3 px-3 text-slate-600">{idx + 1}</td>
                                             <td className="py-3 px-3">
-                                                <Link to={`/frame/${f.id}`} className="inline-block">
+                                                {/* ✅ Thêm ?preview=true để không tăng lượt xem */}
+                                                <Link to={`/frame/${f.id}?preview=true`} className="inline-block">
                                                     <div className="size-12 overflow-hidden rounded-lg ring-1 ring-slate-200">
                                                         <img
                                                             src={f.imageUrl || '/placeholder-frame.png'}
@@ -366,7 +367,8 @@ export default function MyFrames() {
                                             </td>
 
                                             <td className="py-3 px-3">
-                                                <Link to={`/frame/${f.id}`} className="line-clamp-1 font-medium text-gray-900 hover:text-blue-700" title={f.title}>
+                                                {/* ✅ Thêm ?preview=true */}
+                                                <Link to={`/frame/${f.id}?preview=true`} className="line-clamp-1 font-medium text-gray-900 hover:text-blue-700" title={f.title}>
                                                     {f.title || 'Không có tiêu đề'}
                                                 </Link>
                                             </td>
@@ -380,7 +382,8 @@ export default function MyFrames() {
 
                                             <td className="py-3 px-3">
                                                 <div className="flex flex-wrap gap-2">
-                                                    <Link to={`/frame/${f.id}`} className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-700 shadow-sm">
+                                                    {/* ✅ Thêm ?preview=true cho nút Xem */}
+                                                    <Link to={`/frame/${f.id}?preview=true`} className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-700 shadow-sm">
                                                         <Eye size={14} /> Xem
                                                     </Link>
                                                     <Link to={`/frame/${f.id}/edit`} className="inline-flex items-center gap-1 rounded-lg bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-600 shadow-sm">

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Download, Share2, Eye, Calendar, User, Loader2, Heart, Copy, Check } from 'lucide-react'
 
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
@@ -37,6 +37,8 @@ function LoadingSpinner() {
 export default function FrameDetail() {
     const { id } = useParams()
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams() // ✅ Thêm để đọc query params
+    const isPreview = searchParams.get('preview') === 'true' // ✅ Kiểm tra preview mode
 
     const [frame, setFrame] = useState(null)
     const [loading, setLoading] = useState(true)
@@ -45,14 +47,15 @@ export default function FrameDetail() {
 
     useEffect(() => {
         fetchFrameDetail()
-    }, [id])
+    }, [id, isPreview]) // ✅ Thêm isPreview vào dependency
 
     async function fetchFrameDetail() {
         try {
             setLoading(true)
             setError(null)
 
-            const res = await fetch(`${BACKEND_ORIGIN}/api/frames/${id}`, {
+            // ✅ Sử dụng endpoint GET /api/Frames/{id} (không tăng view)
+            const res = await fetch(`${BACKEND_ORIGIN}/api/Frames/${id}`, {
                 credentials: 'include'
             })
 
@@ -66,9 +69,9 @@ export default function FrameDetail() {
             }
 
             const data = await res.json()
-            console.log('API response:', data) // Debug
+            console.log('API response:', data)
 
-            // Map dữ liệu từ API theo cấu trúc backend thực tế
+            // Map dữ liệu từ API
             const mappedFrame = {
                 id: data.id ?? data.Id,
                 title: data.tieuDe ?? data.TieuDe ?? 'Không có tiêu đề',
@@ -78,7 +81,7 @@ export default function FrameDetail() {
                 uses: data.luotTai ?? data.LuotTai ?? 0,
                 createdAt: data.ngayDang ?? data.NgayDang,
                 imageUrl: data.urlXemTruoc ?? data.UrlXemTruoc ? withBackendOrigin(data.urlXemTruoc ?? data.UrlXemTruoc) : '/placeholder-frame.png',
-                downloadUrl: data.urlXemTruoc ?? data.UrlXemTruoc ? withBackendOrigin(data.urlXemTruoc ?? data.UrlXemTruoc) : null, // Dùng chung với preview
+                downloadUrl: data.urlXemTruoc ?? data.UrlXemTruoc ? withBackendOrigin(data.urlXemTruoc ?? data.UrlXemTruoc) : null,
                 author: {
                     id: data.owner?.id ?? data.Owner?.Id,
                     name: data.owner?.name ?? data.Owner?.Name ?? 'Ẩn danh',
@@ -88,8 +91,10 @@ export default function FrameDetail() {
 
             setFrame(mappedFrame)
 
-            // Tăng lượt xem (gọi API riêng) - sử dụng endpoint cũ
-            incrementView()
+            // ✅ Chỉ tăng lượt xem khi KHÔNG phải preview mode
+            if (!isPreview) {
+                incrementView()
+            }
 
         } catch (e) {
             console.error('fetchFrameDetail error:', e)
@@ -101,8 +106,8 @@ export default function FrameDetail() {
 
     async function incrementView() {
         try {
-            // Sử dụng endpoint hiện tại của backend
-            await fetch(`${BACKEND_ORIGIN}/api/frames/view/${id}`, {
+            // ✅ Gọi POST /api/Frames/view/{id}?preview=false
+            await fetch(`${BACKEND_ORIGIN}/api/Frames/view/${id}?preview=false`, {
                 method: 'POST',
                 credentials: 'include'
             })
@@ -115,11 +120,13 @@ export default function FrameDetail() {
         if (!frame?.downloadUrl) return
 
         try {
-            // Tăng lượt tải - sử dụng endpoint hiện tại của backend
-            await fetch(`${BACKEND_ORIGIN}/api/frames/download/${id}`, {
-                method: 'POST',
-                credentials: 'include'
-            })
+            // ✅ Chỉ tăng lượt tải khi KHÔNG phải preview mode
+            if (!isPreview) {
+                await fetch(`${BACKEND_ORIGIN}/api/Frames/download/${id}?preview=false`, {
+                    method: 'POST',
+                    credentials: 'include'
+                })
+            }
 
             // Tải file
             const link = document.createElement('a')
@@ -129,8 +136,10 @@ export default function FrameDetail() {
             link.click()
             document.body.removeChild(link)
 
-            // Cập nhật số lượt tải trong UI
-            setFrame(prev => prev ? { ...prev, uses: prev.uses + 1 } : null)
+            // ✅ Chỉ cập nhật UI khi không phải preview
+            if (!isPreview) {
+                setFrame(prev => prev ? { ...prev, uses: prev.uses + 1 } : null)
+            }
 
         } catch (e) {
             console.error('handleDownload error:', e)
@@ -213,6 +222,8 @@ export default function FrameDetail() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
             <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
+
+
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <button

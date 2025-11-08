@@ -171,7 +171,64 @@ export async function getFrames() {
 }
 
 // giữ nguyên các hàm
-export function getTrending() { return Promise.resolve([...FRAMES].sort((a, b) => b.used24h - a.used24h)) }
+
+// Thay thế hàm getTrending() cũ bằng:
+export async function getTrending(params = {}) {
+  try {
+    const { take = 20, skip = 0, signal } = params
+
+    console.log(`🔍 Calling trending API: ${BACKEND_ORIGIN}/api/frames/trending-24h`)
+
+    const response = await fetch(
+      `${BACKEND_ORIGIN}/api/frames/trending-24h?take=${take}&skip=${skip}`,
+      {
+        credentials: 'include',
+        signal
+      }
+    )
+
+    if (!response.ok) {
+      console.warn(`❌ Trending API failed: ${response.status}`)
+      // Fallback về mock data
+      return [...FRAMES].sort((a, b) => b.used24h - a.used24h).slice(0, take)
+    }
+
+    const data = await response.json()
+    console.log(`📦 Trending API data:`, data)
+
+    // Backend trả về: rank, id, tieuDe, alias, urlXemTruoc, views24h, downloads24h, score, percent, owner
+    // Map sang format FE hiện tại
+    const mapped = data.map(item => ({
+      id: item.id || item.Id,
+      alias: item.alias || item.Alias,
+      name: item.tieuDe || item.TieuDe || 'Khung không tên',
+      thumb: (item.urlXemTruoc || item.UrlXemTruoc)
+        ? `${BACKEND_ORIGIN}${item.urlXemTruoc || item.UrlXemTruoc}`
+        : '/placeholder-frame.png',
+      overlay: (item.urlXemTruoc || item.UrlXemTruoc)
+        ? `${BACKEND_ORIGIN}${item.urlXemTruoc || item.UrlXemTruoc}`
+        : '/placeholder-frame.png',
+
+      // ⭐ Dữ liệu xu hướng 24h
+      rank: item.rank,
+      views24h: item.views24h || item.Views24h || 0,
+      downloads24h: item.downloads24h || item.Downloads24h || 0,
+      score: item.score || item.Score || 0,
+      percent: item.percent || item.Percent || 0,
+
+      // Owner
+      owner: item.owner || item.Owner || null,
+      ngayTao: item.ngayDang || item.NgayDang || null
+    }))
+
+    return mapped
+
+  } catch (error) {
+    console.error('❌ Trending API error:', error)
+    // Fallback về mock data
+    return [...FRAMES].sort((a, b) => b.used24h - a.used24h).slice(0, params.take || 20)
+  }
+}
 
 
 
