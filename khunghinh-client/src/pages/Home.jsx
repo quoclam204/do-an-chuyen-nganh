@@ -1,5 +1,5 @@
 // src/pages/Home.jsx
-import { Image as ImgIcon, ImageDown, Maximize2 } from 'lucide-react'
+import { Image as ImgIcon, ImageDown, Maximize2, Eye, Clock, User } from 'lucide-react'
 import FrameGrid from '../components/FrameGrid'
 import FrameCardClassic from '../components/FrameCardClassic'
 import { useEffect, useMemo, useState } from 'react'
@@ -11,8 +11,6 @@ import { Play } from "lucide-react";
 import { FileDown } from 'lucide-react'
 
 import { Link } from "react-router-dom";
-
-
 
 /* ===== NỀN XANH KIỂU CUBE (nâng cấp) ===== */
 function BlueCubesBackground() {
@@ -52,8 +50,6 @@ function BlueCubesBackground() {
           </g>
         ))}
       </svg>
-
-
     </div>
   )
 }
@@ -61,15 +57,61 @@ function BlueCubesBackground() {
 
 export default function Home() {
   const [frames, setFrames] = useState([])
+  const [trendingFrames, setTrendingFrames] = useState([])
   const nav = useNavigate()
 
   useEffect(() => {
     getFrames().then(setFrames)
+
+    const fetchTrending = async () => {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || 'https://localhost:7090'
+        const res = await fetch(`${API_URL}/api/frames/trending?take=4`, {
+          credentials: 'include'
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          console.log('✅ Trending API response:', data)
+
+          const mapped = data.map(item => {
+            let imageUrl = item.thumb || item.UrlXemTruoc || item.urlXemTruoc
+            if (imageUrl && !imageUrl.startsWith('http')) {
+              imageUrl = `${API_URL}${imageUrl}`
+            }
+
+            return {
+              id: item.id || item.Id,
+              alias: item.alias || item.Alias,
+              name: item.name || item.tieuDe || item.TieuDe,
+              thumb: imageUrl,
+              overlay: imageUrl,
+
+              // ✅ Lấy từ backend
+              views: item.luotXem || item.LuotXem || 0,
+              downloads: item.luotTai || item.LuotTai || 0,
+              createdAt: item.ngayDang || item.NgayDang,
+
+              tag: 'Chiến dịch',
+
+              // ✅ Lấy owner từ backend
+              author: item.owner?.name || 'MARKETING VEC',
+              authorAvatar: item.owner?.avatar
+            }
+          })
+
+          console.log('✅ Mapped trending data:', mapped)
+          setTrendingFrames(mapped)
+        }
+      } catch (e) {
+        console.error('❌ Fetch trending error:', e)
+      }
+    }
+
+    fetchTrending()
   }, [])
 
-
-
-  // Top 4 khung nổi bật (ưu tiên used24h)
+  // Top 4 khung nổi bật
   const featuredFrames = useMemo(() => {
     if (!frames?.length) return []
     const scored = frames.map(f => ({
@@ -79,7 +121,7 @@ export default function Home() {
     return scored.sort((a, b) => b._score - a._score).slice(0, 4)
   }, [frames])
 
-  // Lọc khung cho campaign A80 (đổi điều kiện theo dữ liệu của bạn)
+  // Lọc khung cho campaign A80
   const a80Frames = useMemo(() => {
     if (!frames?.length) return [];
     return frames.filter(f =>
@@ -94,12 +136,9 @@ export default function Home() {
     { t: 'Ảnh → PDF', d: 'Gộp nhiều ảnh thành một PDF', to: '/image-to-pdf', icon: <FileDown className="w-6 h-6" /> },
   ];
 
-  // Home.jsx – bên trong component Home(), đặt trước return
   const isNew = (f) => {
-    // 1) back-end đã trả sẵn cờ
     if (typeof f.isNew === 'boolean') return f.isNew;
 
-    // 2) tự tính: lấy trường thời gian có thể có
     const iso =
       f.ngayDang || f.NgayDang || f.ngayTao || f.NgayTao ||
       f.createdAt || f.date;
@@ -107,10 +146,8 @@ export default function Home() {
 
     const created = new Date(iso);
     const hours = (Date.now() - created.getTime()) / 36e5;
-    return hours <= 24; // NEW trong 24h
+    return hours <= 24;
   };
-
-
 
   return (
     <div>
@@ -119,7 +156,6 @@ export default function Home() {
         <BlueCubesBackground />
 
         <div className="relative z-10 max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center px-6 py-16">
-          {/* Cột trái */}
           <div className="max-w-xl space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-medium ring-1 ring-blue-300/60 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-blue-600" />
@@ -159,7 +195,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Cột phải */}
           <div className="flex justify-center md:justify-end">
             <img
               src="/frames/khung-home.png"
@@ -170,12 +205,9 @@ export default function Home() {
         </div>
       </section>
 
-
-
       {/* ============ CAMPAIGN STRIP (A80) ============ */}
       {a80Frames.length > 0 && (
         <section className="relative overflow-hidden">
-          {/* Nền xanh gradient + trang trí */}
           <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-[#0d47a1] via-[#1976d2] to-[#1565c0]" />
           <div aria-hidden className="absolute inset-0 opacity-[.08] [background:radial-gradient(80%_80%_at_20%_10%,#fff,transparent_60%)]" />
           <div className="absolute -top-20 left-1/4 h-[280px] w-[280px] rounded-full bg-sky-300/30 blur-3xl animate-float" />
@@ -186,7 +218,6 @@ export default function Home() {
               KHUNG HÌNH MỚI NHẤT NĂM <span className="opacity-90">2025</span>
             </h2>
 
-            {/* Container carousel */}
             <div className="mt-4 rounded-3xl bg-white/90 shadow-[0_10px_40px_-10px_rgba(0,0,0,.25)] ring-1 ring-blue-200/60 p-4 backdrop-blur">
               <div className="px-3 pb-2">
                 <div className="text-[15px] font-semibold text-blue-700">Khung hình Đại hội Đảng</div>
@@ -197,48 +228,38 @@ export default function Home() {
                   {a80Frames.map((f, i) => (
                     <li key={f.alias || i} className="shrink-0">
                       <button
-                        onClick={() => nav(`/editor?alias=${f.alias}`)} // hoặc nav(`/${f.alias}`) nếu dùng route alias ngắn
-                        className="block w-[220px] rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white
-                     shadow-[0_10px_25px_-12px_rgba(0,0,0,.25)] transition-shadow hover:shadow-lg"
+                        onClick={() => nav(`/editor?alias=${f.alias}`)}
+                        className="block w-[220px] rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white shadow-[0_10px_25px_-12px_rgba(0,0,0,.25)] transition-shadow hover:shadow-lg"
                         title={f.name || 'Khung'}
                       >
-                        {/* Ô xem trước: VUÔNG, nền trắng để nhìn thấy vùng trong suốt của PNG */}
                         <div className="relative aspect-square bg-white grid place-items-center">
                           <img
                             src={f.overlay || f.thumb}
                             alt={f.name || 'frame'}
-                            className="max-w-full max-h-full object-contain select-none
-               [image-rendering:auto] [image-rendering:-webkit-optimize-contrast]"
+                            className="max-w-full max-h-full object-contain select-none [image-rendering:auto] [image-rendering:-webkit-optimize-contrast]"
                             width="512" height="512" decoding="async" loading="lazy"
                           />
 
-                          {/* Nhãn NEW */}
                           {isNew(f) && (
-                            <div className="absolute top-2 right-2 px-2 py-1 rounded-md
-                    bg-gradient-to-r from-rose-500 to-orange-500
-                    text-white text-xs font-bold shadow-md animate-pulse">
+                            <div className="absolute top-2 right-2 px-2 py-1 rounded-md bg-gradient-to-r from-rose-500 to-orange-500 text-white text-xs font-bold shadow-md animate-pulse">
                               NEW
                             </div>
                           )}
 
                           <div className="pointer-events-none absolute inset-0 ring-1 ring-black/5" />
                         </div>
-                        {/* BỎ phần text/info bên dưới */}
                       </button>
                     </li>
                   ))}
                 </ul>
               </div>
-
             </div>
           </div>
         </section>
       )}
 
-
       {/* ============ TOOLS ============ */}
       <section className="relative">
-        {/* radial background rất nhẹ để tách section */}
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_0%,rgba(59,130,246,0.12),transparent_70%)]" />
         <div className="relative max-w-7xl mx-auto px-6 py-12">
           <h2 className="text-2xl font-bold mb-6">Các công cụ tiện lợi</h2>
@@ -289,66 +310,45 @@ export default function Home() {
           </motion.button>
         </div>
 
-        <MotionStagger className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredFrames.map((f, idx) => (
-            <MotionCard i={idx} key={f.alias} className="h-full">
-              {/* KHÔNG dùng .shine cũ, dùng .shine-safe và KHÔNG đặt overflow-hidden ở đây */}
-              <div className="shine-safe hover-lift transform-gpu">
-                <FrameCardClassic
-                  frame={{
-                    ...f,
-                    tag: f.tag || 'Chiến dịch',
-                    author: f.author || 'MARKETING VEC',
-                    date: f.date || '2 ngày trước',
-                  }}
-                  rank={idx + 1}
-                  theme="blue"
-                  onUse={() => nav(`/editor?alias=${f.alias}`)}
-                />
-              </div>
-            </MotionCard>
-          ))}
-        </MotionStagger>
-
+        {trendingFrames.length > 0 ? (
+          <MotionStagger className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {trendingFrames.map((f, idx) => (
+              <MotionCard i={idx} key={f.alias} className="h-full">
+                <div className="shine-safe hover-lift transform-gpu">
+                  <FrameCardClassic
+                    frame={{
+                      ...f,
+                      date: f.createdAt ? formatDate(f.createdAt) : '2 ngày trước',
+                    }}
+                    rank={idx + 1}
+                    theme="blue"
+                    onUse={() => nav(`/editor?alias=${f.alias}`)}
+                  />
+                </div>
+              </MotionCard>
+            ))}
+          </MotionStagger>
+        ) : (
+          <div className="text-center py-12 text-gray-500">
+            Đang tải khung hình xu hướng...
+          </div>
+        )}
       </section>
 
       {/* ============ FOLLOW ============ */}
       <section className="relative overflow-hidden">
-        {/* Nền xanh gradient A80 */}
-        <div
-          aria-hidden
-          className="absolute inset-0 
-         bg-gradient-to-b from-[#0d47a1] via-[#1976d2] to-[#1565c0]"
-        />
-
-        {/* Glow radial nhẹ */}
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-[.08]
-         [background:radial-gradient(80%_80%_at_20%_10%,#fff,transparent_60%)]"
-        />
-
-        {/* Floating blobs */}
+        <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-[#0d47a1] via-[#1976d2] to-[#1565c0]" />
+        <div aria-hidden className="absolute inset-0 opacity-[.08] [background:radial-gradient(80%_80%_at_20%_10%,#fff,transparent_60%)]" />
         <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl animate-float" />
         <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-sky-300/30 blur-3xl animate-float-slow" />
 
-        {/* Nội dung FOLLOW */}
         <div className="relative max-w-7xl mx-auto px-6 py-8">
-          {/* Tiêu đề trắng, giống section trên */}
           <h2 className="text-white text-2xl md:text-3xl font-extrabold tracking-wide drop-shadow-md">
             THEO DÕI CHÚNG TÔI ĐỂ NHẬN MẪU MỚI HẰNG NGÀY
           </h2>
 
-          {/* Container trắng giống section trên */}
           <div className="mt-4 rounded-3xl bg-white/90 shadow-[0_10px_40px_-10px_rgba(0,0,0,.25)] ring-1 ring-blue-200/60 p-6 md:p-8 backdrop-blur">
             <div className="text-center">
-              {/* Icon/Emoji */}
-
-
-              {/* Mô tả */}
-
-
-              {/* Buttons */}
               <div className="flex justify-center gap-4 flex-wrap">
                 <a
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50 transition-all duration-200 shadow-sm"
@@ -373,7 +373,6 @@ export default function Home() {
                   Facebook Group
                 </a>
               </div>
-
             </div>
           </div>
         </div>
@@ -428,4 +427,21 @@ export default function Home() {
       </section>
     </div>
   )
+}
+
+// ✅ Helper function format ngày
+function formatDate(dateString) {
+  if (!dateString) return '2 ngày trước'
+
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now - date
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) return 'Hôm nay'
+  if (diffDays === 1) return 'Hôm qua'
+  if (diffDays < 7) return `${diffDays} ngày trước`
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} tuần trước`
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} tháng trước`
+  return date.toLocaleDateString('vi-VN')
 }

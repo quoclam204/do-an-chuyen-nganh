@@ -270,20 +270,29 @@ namespace Khunghinh.Api.Controllers
             if (frame == null) return NotFound();
 
             frame.LuotXem += 1;
+
+            // ✅ CẬP NHẬT ThongKeNgay
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var stat = await _db.ThongKeNgays.FirstOrDefaultAsync(x => x.KhungHinhId == id && x.Ngay == today);
+            if (stat == null)
+            {
+                stat = new ThongKeNgay { KhungHinhId = id, Ngay = today };
+                _db.ThongKeNgays.Add(stat);
+            }
+            stat.Xem += 1;
+
             await _db.SaveChangesAsync();
 
-            // ✅ Trả về camelCase để frontend dễ dùng
             return Ok(new
             {
                 id = frame.Id,
                 tieuDe = frame.TieuDe,
                 alias = frame.Alias,
                 urlXemTruoc = frame.UrlXemTruoc,
-                luotXem = frame.LuotXem,  // ✅ camelCase
-                luotTai = frame.LuotTai   // ✅ camelCase
+                luotXem = frame.LuotXem,
+                luotTai = frame.LuotTai
             });
         }
-
 
         // Tăng lượt tải
         [HttpPost("download/{id:long}")]
@@ -294,17 +303,27 @@ namespace Khunghinh.Api.Controllers
             if (frame == null) return NotFound();
 
             frame.LuotTai += 1;
+
+            // ✅ CẬP NHẬT ThongKeNgay
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var stat = await _db.ThongKeNgays.FirstOrDefaultAsync(x => x.KhungHinhId == id && x.Ngay == today);
+            if (stat == null)
+            {
+                stat = new ThongKeNgay { KhungHinhId = id, Ngay = today };
+                _db.ThongKeNgays.Add(stat);
+            }
+            stat.Tai += 1;
+
             await _db.SaveChangesAsync();
 
-            // ✅ Trả về camelCase
             return Ok(new
             {
                 id = frame.Id,
                 tieuDe = frame.TieuDe,
                 alias = frame.Alias,
                 urlXemTruoc = frame.UrlXemTruoc,
-                luotXem = frame.LuotXem,  // ✅ camelCase
-                luotTai = frame.LuotTai   // ✅ camelCase
+                luotXem = frame.LuotXem,
+                luotTai = frame.LuotTai
             });
         }
 
@@ -414,6 +433,78 @@ namespace Khunghinh.Api.Controllers
             {
                 Console.WriteLine($"[UpdateFrame] ERROR: {ex}");
                 return StatusCode(500, $"Lỗi server: {ex.Message}");
+            }
+        }
+
+        // Lấy top khung hình xu hướng trong 24h
+        [HttpGet("trending")]
+        [AllowAnonymous]
+        public IActionResult GetTrendingFrames([FromQuery] int take = 10)
+        {
+            try
+            {
+                var today = DateOnly.FromDateTime(DateTime.UtcNow);
+                var yesterday = today.AddDays(-1);
+
+                var trending = _db.ThongKeNgays
+                    .Where(x => x.Ngay >= yesterday && x.Ngay <= today)
+                    .GroupBy(x => x.KhungHinhId)
+                    .Select(g => new {
+                        KhungHinhId = g.Key,
+                        Views24h = g.Sum(x => x.Xem),
+                        Downloads24h = g.Sum(x => x.Tai),
+                        TrendScore = g.Sum(x => x.Xem * 1 + x.Tai * 3)
+                    })
+                    .OrderByDescending(x => x.TrendScore)
+                    .Take(take)
+                    .ToList();
+
+                var frameIds = trending.Select(x => x.KhungHinhId).ToList();
+                var frames = _db.KhungHinhs
+                    .Where(x => frameIds.Contains(x.Id)
+                             && x.TrangThai == "dang_hoat_dong"
+                             && x.CheDoHienThi == "cong_khai")
+                    .Include(x => x.ChuSoHuu)
+                    .AsNoTracking()
+                    .ToDictionary(x => x.Id);
+
+                var result = trending
+                    .Where(t => frames.ContainsKey(t.KhungHinhId))
+                    .Select((t, index) => {
+                        var frame = frames[t.KhungHinhId];
+                        var total = t.Views24h + t.Downloads24h;
+                        return new
+                        {
+                            id = frame.Id,
+                            name = frame.TieuDe,
+                            alias = frame.Alias,
+                            thumb = frame.UrlXemTruoc,
+
+                            // ✅ Trả về tổng lượt xem/tải (giống FrameDetail)
+                            luotXem = frame.LuotXem,
+                            luotTai = frame.LuotTai,
+
+                            // Giữ lại data 24h cho ranking
+                            views24h = t.Views24h,
+                            downloads24h = t.Downloads24h,
+                            percent = total > 0 ? Math.Round((double)t.Downloads24h / total * 100, 1) : 0,
+                            rank = index + 1,
+                            owner = frame.ChuSoHuu == null ? null : new
+                            {
+                                id = frame.ChuSoHuu.Id,
+                                name = frame.ChuSoHuu.TenHienThi,
+                                avatar = frame.ChuSoHuu.AnhDaiDienUrl
+                            }
+                        };
+                    })
+                    .ToList();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetTrendingFrames] ERROR: {ex}");
+                return StatusCode(500, "Lỗi server");
             }
         }
     }

@@ -1,20 +1,28 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Download, Share2, Eye, Calendar, User, Loader2, Heart, Copy, Check } from 'lucide-react'
+import { ArrowLeft, Download, Share2, Eye, Calendar, User, Loader2, Heart, Copy, Check, Edit } from 'lucide-react'
 
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 
 const STATUS_META = {
-    active: { label: 'Đang hoạt động', chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200', dot: 'bg-emerald-500' },
-    inactive: { label: 'Tạm dừng', chip: 'bg-slate-50 text-slate-700 ring-slate-200', dot: 'bg-slate-400' },
-    pending: { label: 'Chờ duyệt', chip: 'bg-amber-50 text-amber-700 ring-amber-200', dot: 'bg-amber-500' }
+    'dang_hoat_dong': { label: 'Đang hoạt động', chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200', dot: 'bg-emerald-500' },
+    'tam_dung': { label: 'Tạm dừng', chip: 'bg-slate-50 text-slate-700 ring-slate-200', dot: 'bg-slate-400' },
+    'cho_duyet': { label: 'Chờ duyệt', chip: 'bg-amber-50 text-amber-700 ring-amber-200', dot: 'bg-amber-500' }
 }
 
-const formatDate = (d) => (d ? new Date(d).toLocaleDateString('vi-VN') : '-')
+const formatDate = (d) => {
+    if (!d) return '-'
+    return new Date(d).toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    })
+}
+
 const getAvatarUrl = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=0D8ABC&color=fff&size=128&bold=true`
 
 function StatusBadge({ status }) {
-    const meta = STATUS_META[status] || STATUS_META.active
+    const meta = STATUS_META[status] || STATUS_META['dang_hoat_dong']
     return (
         <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ring-1 ${meta.chip}`}>
             <span className={`size-2 rounded-full ${meta.dot}`} />
@@ -37,24 +45,25 @@ function LoadingSpinner() {
 export default function FrameDetail() {
     const { id } = useParams()
     const navigate = useNavigate()
-    const [searchParams] = useSearchParams() // ✅ Thêm để đọc query params
-    const isPreview = searchParams.get('preview') === 'true' // ✅ Kiểm tra preview mode
+    const [searchParams] = useSearchParams()
+    const isPreview = searchParams.get('preview') === 'true'
 
     const [frame, setFrame] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [copied, setCopied] = useState(false)
+    const [isOwner, setIsOwner] = useState(false)
 
     useEffect(() => {
         fetchFrameDetail()
-    }, [id, isPreview]) // ✅ Thêm isPreview vào dependency
+    }, [id])
 
     async function fetchFrameDetail() {
         try {
             setLoading(true)
             setError(null)
 
-            // ✅ Sử dụng endpoint GET /api/Frames/{id} (không tăng view)
+            // ✅ Gọi API GET /api/Frames/{id}
             const res = await fetch(`${BACKEND_ORIGIN}/api/Frames/${id}`, {
                 credentials: 'include'
             })
@@ -69,50 +78,67 @@ export default function FrameDetail() {
             }
 
             const data = await res.json()
-            console.log('API response:', data)
+            console.log('✅ Frame detail API response:', data)
 
-            // Map dữ liệu từ API
+            // ✅ Map dữ liệu (hỗ trợ cả PascalCase và camelCase)
             const mappedFrame = {
                 id: data.id ?? data.Id,
                 title: data.tieuDe ?? data.TieuDe ?? 'Không có tiêu đề',
                 alias: data.alias ?? data.Alias,
-                status: mapStatus(data.trangThai ?? data.TrangThai),
+                status: data.trangThai ?? data.TrangThai ?? 'dang_hoat_dong',
                 clicks: data.luotXem ?? data.LuotXem ?? 0,
                 uses: data.luotTai ?? data.LuotTai ?? 0,
                 createdAt: data.ngayDang ?? data.NgayDang,
                 imageUrl: data.urlXemTruoc ?? data.UrlXemTruoc ? withBackendOrigin(data.urlXemTruoc ?? data.UrlXemTruoc) : '/placeholder-frame.png',
                 downloadUrl: data.urlXemTruoc ?? data.UrlXemTruoc ? withBackendOrigin(data.urlXemTruoc ?? data.UrlXemTruoc) : null,
-                author: {
-                    id: data.owner?.id ?? data.Owner?.Id,
-                    name: data.owner?.name ?? data.Owner?.Name ?? 'Ẩn danh',
-                    avatar: data.owner?.avatar ?? data.Owner?.Avatar
-                }
+                owner: data.owner ? {
+                    id: data.owner.id ?? data.owner.Id,
+                    name: data.owner.name ?? data.owner.Name ?? 'Ẩn danh',
+                    avatar: data.owner.avatar ?? data.owner.Avatar
+                } : null
             }
 
             setFrame(mappedFrame)
 
-            // ✅ Chỉ tăng lượt xem khi KHÔNG phải preview mode
+            // ✅ Kiểm tra quyền sở hữu
+            checkOwnership()
+
+            // ✅ Chỉ tăng view khi KHÔNG phải preview mode
             if (!isPreview) {
                 incrementView()
             }
 
         } catch (e) {
-            console.error('fetchFrameDetail error:', e)
+            console.error('❌ fetchFrameDetail error:', e)
             setError('Có lỗi xảy ra khi tải khung hình')
         } finally {
             setLoading(false)
         }
     }
 
+    async function checkOwnership() {
+        try {
+            const res = await fetch(`${BACKEND_ORIGIN}/api/auth/me`, {
+                credentials: 'include'
+            })
+            if (res.ok) {
+                const user = await res.json()
+                setIsOwner(user.id === frame?.owner?.id)
+            }
+        } catch (e) {
+            console.error('checkOwnership error:', e)
+        }
+    }
+
     async function incrementView() {
         try {
-            // ✅ Gọi POST /api/Frames/view/{id}?preview=false
-            await fetch(`${BACKEND_ORIGIN}/api/Frames/view/${id}?preview=false`, {
+            await fetch(`${BACKEND_ORIGIN}/api/Frames/view/${id}`, {
                 method: 'POST',
                 credentials: 'include'
             })
+            console.log('✅ View incremented')
         } catch (e) {
-            console.error('incrementView error:', e)
+            console.error('❌ incrementView error:', e)
         }
     }
 
@@ -120,35 +146,36 @@ export default function FrameDetail() {
         if (!frame?.downloadUrl) return
 
         try {
-            // ✅ Chỉ tăng lượt tải khi KHÔNG phải preview mode
+            // ✅ Chỉ tăng download count khi KHÔNG phải preview
             if (!isPreview) {
-                await fetch(`${BACKEND_ORIGIN}/api/Frames/download/${id}?preview=false`, {
+                await fetch(`${BACKEND_ORIGIN}/api/Frames/download/${id}`, {
                     method: 'POST',
                     credentials: 'include'
                 })
+                console.log('✅ Download incremented')
             }
 
             // Tải file
             const link = document.createElement('a')
             link.href = frame.downloadUrl
-            link.download = `${frame.title}.png`
+            link.download = `${frame.alias || frame.title}.png`
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
 
-            // ✅ Chỉ cập nhật UI khi không phải preview
+            // Cập nhật UI local
             if (!isPreview) {
                 setFrame(prev => prev ? { ...prev, uses: prev.uses + 1 } : null)
             }
 
         } catch (e) {
-            console.error('handleDownload error:', e)
+            console.error('❌ handleDownload error:', e)
             alert('Có lỗi xảy ra khi tải khung hình')
         }
     }
 
     async function handleShare() {
-        const url = window.location.href
+        const url = `${window.location.origin}/editor?alias=${frame.alias}`
 
         if (navigator.share) {
             try {
@@ -158,7 +185,9 @@ export default function FrameDetail() {
                     url: url
                 })
             } catch (e) {
-                copyToClipboard(url)
+                if (e.name !== 'AbortError') {
+                    copyToClipboard(url)
+                }
             }
         } else {
             copyToClipboard(url)
@@ -170,9 +199,10 @@ export default function FrameDetail() {
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
         }).catch(() => {
-            // Fallback
             const textarea = document.createElement('textarea')
             textarea.value = text
+            textarea.style.position = 'fixed'
+            textarea.style.opacity = '0'
             document.body.appendChild(textarea)
             textarea.select()
             document.execCommand('copy')
@@ -180,14 +210,6 @@ export default function FrameDetail() {
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
         })
-    }
-
-    function mapStatus(dbStatus) {
-        if (!dbStatus) return 'active'
-        const s = String(dbStatus).toLowerCase()
-        if (s.includes('tam') || s.includes('inactive')) return 'inactive'
-        if (s.includes('cho') || s.includes('pending')) return 'pending'
-        return 'active'
     }
 
     function withBackendOrigin(url) {
@@ -206,11 +228,11 @@ export default function FrameDetail() {
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">{error}</h1>
                     <p className="text-gray-600 mb-6">Khung hình có thể đã bị xóa hoặc không tồn tại.</p>
                     <button
-                        onClick={() => navigate('/my-frames')}
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
+                        onClick={() => navigate('/')}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition"
                     >
                         <ArrowLeft size={20} />
-                        Quay lại danh sách
+                        Về trang chủ
                     </button>
                 </div>
             </div>
@@ -222,26 +244,26 @@ export default function FrameDetail() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
             <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
-
-
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <button
                         onClick={() => navigate(-1)}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
+                        className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 font-medium transition"
                     >
                         <ArrowLeft size={20} />
                         Quay lại
                     </button>
 
-                    <div className="flex items-center gap-3">
+                    {/* ✅ Chỉ hiện nút Edit nếu là owner */}
+                    {isOwner && (
                         <Link
                             to={`/frame/${frame.id}/edit`}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-semibold hover:bg-amber-600"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-semibold hover:bg-amber-600 transition"
                         >
+                            <Edit size={18} />
                             Chỉnh sửa
                         </Link>
-                    </div>
+                    )}
                 </div>
 
                 <div className="grid lg:grid-cols-2 gap-8">
@@ -251,7 +273,7 @@ export default function FrameDetail() {
                             <img
                                 src={frame.imageUrl}
                                 alt={frame.title}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-contain"
                                 onError={(e) => { e.currentTarget.src = '/placeholder-frame.png' }}
                             />
                         </div>
@@ -261,7 +283,7 @@ export default function FrameDetail() {
                             <button
                                 onClick={handleDownload}
                                 disabled={!frame.downloadUrl}
-                                className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg shadow-blue-500/30"
                             >
                                 <Download size={20} />
                                 Tải xuống
@@ -269,12 +291,21 @@ export default function FrameDetail() {
 
                             <button
                                 onClick={handleShare}
-                                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200"
+                                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-gray-700 rounded-xl font-semibold hover:bg-gray-50 ring-1 ring-gray-200 transition"
                             >
-                                {copied ? <Check size={20} /> : <Share2 size={20} />}
+                                {copied ? <Check size={20} className="text-green-600" /> : <Share2 size={20} />}
                                 {copied ? 'Đã sao chép!' : 'Chia sẻ'}
                             </button>
                         </div>
+
+                        {/* ✅ Thêm nút "Dùng khung này" */}
+                        <button
+                            onClick={() => navigate(`/editor?alias=${frame.alias}`)}
+                            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition shadow-lg shadow-purple-500/30"
+                        >
+                            <Heart size={20} />
+                            Dùng khung này
+                        </button>
                     </div>
 
                     {/* Right: Details */}
@@ -287,25 +318,25 @@ export default function FrameDetail() {
 
                         {/* Stats */}
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white rounded-xl p-4 ring-1 ring-slate-200">
+                            <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl p-4 ring-1 ring-violet-200">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-violet-100 rounded-lg">
+                                    <div className="p-2 bg-white rounded-lg shadow">
                                         <Eye className="text-violet-600" size={20} />
                                     </div>
                                     <div>
-                                        <div className="text-2xl font-bold text-gray-900">{frame.clicks}</div>
+                                        <div className="text-2xl font-bold text-gray-900">{frame.clicks.toLocaleString()}</div>
                                         <div className="text-sm text-gray-600">Lượt xem</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-xl p-4 ring-1 ring-slate-200">
+                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 ring-1 ring-green-200">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-green-100 rounded-lg">
+                                    <div className="p-2 bg-white rounded-lg shadow">
                                         <Download className="text-green-600" size={20} />
                                     </div>
                                     <div>
-                                        <div className="text-2xl font-bold text-gray-900">{frame.uses}</div>
+                                        <div className="text-2xl font-bold text-gray-900">{frame.uses.toLocaleString()}</div>
                                         <div className="text-sm text-gray-600">Lượt tải</div>
                                     </div>
                                 </div>
@@ -313,33 +344,37 @@ export default function FrameDetail() {
                         </div>
 
                         {/* Author */}
-                        <div className="bg-white rounded-xl p-4 ring-1 ring-slate-200">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-3">Tác giả</h3>
-                            <div className="flex items-center gap-3">
-                                <img
-                                    src={frame.author.avatar || getAvatarUrl(frame.author.name)}
-                                    alt={frame.author.name}
-                                    className="size-12 rounded-full object-cover ring-2 ring-white shadow"
-                                    referrerPolicy="no-referrer"
-                                />
-                                <div>
-                                    <div className="font-semibold text-gray-900">{frame.author.name}</div>
-                                    <div className="text-sm text-gray-600">Người tạo khung hình</div>
+                        {frame.owner && (
+                            <div className="bg-white rounded-xl p-5 ring-1 ring-slate-200 shadow-sm">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-3">Tác giả</h3>
+                                <div className="flex items-center gap-3">
+                                    <img
+                                        src={frame.owner.avatar || getAvatarUrl(frame.owner.name)}
+                                        alt={frame.owner.name}
+                                        className="size-12 rounded-full object-cover ring-2 ring-white shadow"
+                                        referrerPolicy="no-referrer"
+                                    />
+                                    <div>
+                                        <div className="font-semibold text-gray-900">{frame.owner.name}</div>
+                                        <div className="text-sm text-gray-600">Người tạo khung hình</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Metadata */}
-                        <div className="bg-white rounded-xl p-4 ring-1 ring-slate-200">
+                        <div className="bg-white rounded-xl p-5 ring-1 ring-slate-200 shadow-sm">
                             <h3 className="text-lg font-semibold text-gray-900 mb-3">Thông tin</h3>
-                            <div className="space-y-2 text-sm">
+                            <div className="space-y-3 text-sm">
                                 <div className="flex items-center gap-2 text-gray-600">
-                                    <Calendar size={16} />
-                                    <span>Ngày tạo: {formatDate(frame.createdAt)}</span>
+                                    <Calendar size={16} className="text-blue-600" />
+                                    <span className="font-medium">Ngày tạo:</span>
+                                    <span>{formatDate(frame.createdAt)}</span>
                                 </div>
                                 {frame.alias && (
                                     <div className="flex items-center gap-2 text-gray-600">
-                                        <span>Alias: {frame.alias}</span>
+                                        <span className="font-medium">Alias:</span>
+                                        <code className="px-2 py-1 bg-gray-100 rounded text-xs font-mono">{frame.alias}</code>
                                     </div>
                                 )}
                             </div>
