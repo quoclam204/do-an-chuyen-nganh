@@ -115,53 +115,61 @@ export default function Home() {
   return (
     <div>
       {/* ============ HERO ============ */}
-      <section className="relative overflow-hidden min-h-[70vh] md:min-h-[75vh] flex items-center">
+      <section className="relative overflow-hidden min-h-[70vh] flex items-center bg-gradient-to-b from-blue-50 to-white">
         <BlueCubesBackground />
 
-        <div className="relative z-10 max-w-7xl mx-auto grid md:grid-cols-2 gap-10 items-center px-6 py-12">
+        <div className="relative z-10 max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center px-6 py-16">
           {/* Cột trái */}
-          <div className="max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-sm font-medium ring-1 ring-blue-200/60 shadow-sm mb-4">
-              <span className="w-2 h-2 rounded-full bg-blue-500" />
+          <div className="max-w-xl space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-medium ring-1 ring-blue-300/60 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-blue-600" />
               Nơi khung hình được chia sẻ
             </div>
 
             <h1 className="text-4xl md:text-5xl font-extrabold leading-tight text-gray-900">
               Tạo{' '}
               <span className="relative inline-block px-1">
-                <span className="relative z-10 bg-clip-text text-transparent bg-gradient-to-r from-blue-700 via-blue-600 to-sky-500 italic">
+                <span className="relative z-10 bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-sky-500 italic">
                   khung hình
                 </span>
-                {/* gạch nhấn */}
-                <span className="absolute -bottom-1 left-0 w-full h-3 bg-blue-300/50 rounded-sm -z-0" />
-                <span className="absolute -left-3 -top-2 h-3 w-3 border-t-4 border-l-4 border-blue-600/90 rounded-sm" />
-                <span className="absolute -right-3 -top-2 h-3 w-3 border-t-4 border-r-4 border-blue-600/90 rounded-sm" />
+                <span className="absolute -bottom-1 left-0 w-full h-2 bg-blue-300/40 rounded-sm" />
               </span>
               <br />
               online – nhanh, đẹp và tiện lợi
             </h1>
 
-            <p className="mt-4 text-gray-700 text-lg">
-              Cung cấp các công cụ để tạo khung hình và lan toả thông điệp cho chiến dịch, sự kiện, hoạt động… đến mọi người.
+            <p className="text-gray-700 text-lg leading-relaxed">
+              Cung cấp công cụ trực tuyến giúp bạn tạo khung hình và lan toả thông điệp
+              cho chiến dịch, sự kiện hay hoạt động của mình chỉ trong vài phút.
             </p>
 
-            <div className="mt-7 flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-4 pt-2">
               <a
                 href="/editor"
-                className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:translate-y-[1px] shadow-lg shadow-blue-600/20 ring-1 ring-blue-700/50 btn-breathe"
+                className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-md"
               >
                 TẠO NGAY
               </a>
               <a
                 href="/trending"
-                className="px-6 py-3 rounded-xl font-semibold text-gray-800 ring-1 ring-gray-300/70 hover:bg-white transition"
+                className="px-6 py-3 rounded-xl font-semibold text-gray-800 ring-1 ring-gray-300 hover:bg-gray-50 transition"
               >
                 XU HƯỚNG
               </a>
             </div>
           </div>
+
+          {/* Cột phải */}
+          <div className="flex justify-center md:justify-end">
+            <img
+              src="/frames/khung-home.png"
+              alt="Khung hình minh hoạ"
+              className="w-full max-w-md md:max-w-lg drop-shadow-xl rounded-xl"
+            />
+          </div>
         </div>
       </section>
+
 
 
       {/* ============ CAMPAIGN STRIP (A80) ============ */}
