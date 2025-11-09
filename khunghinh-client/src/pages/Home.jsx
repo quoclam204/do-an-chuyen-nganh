@@ -304,84 +304,118 @@ export default function Home() {
 
       </section>
 
-      {/* ============ TEMPLATES ============ */}
+      {/* ============ FOLLOW ============ */}
       <section className="relative overflow-hidden">
         {/* Nền xanh gradient A80 */}
         <div
           aria-hidden
           className="absolute inset-0 
-               bg-gradient-to-b from-[#0d47a1] via-[#1976d2] to-[#1565c0]"
+         bg-gradient-to-b from-[#0d47a1] via-[#1976d2] to-[#1565c0]"
         />
 
         {/* Glow radial nhẹ */}
         <div
           aria-hidden
           className="absolute inset-0 opacity-[.08]
-               [background:radial-gradient(80%_80%_at_20%_10%,#fff,transparent_60%)]"
+         [background:radial-gradient(80%_80%_at_20%_10%,#fff,transparent_60%)]"
         />
 
         {/* Floating blobs */}
         <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl animate-float" />
         <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-sky-300/30 blur-3xl animate-float-slow" />
 
-        {/* Nội dung */}
-        <div className="relative max-w-7xl mx-auto px-6 py-12">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl md:text-3xl font-extrabold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,.35)]">
-              Trang web tham khảo thiết kế
-            </h2>
-          </div>
+        {/* Nội dung FOLLOW */}
+        <div className="relative max-w-7xl mx-auto px-6 py-8">
+          {/* Tiêu đề trắng, giống section trên */}
+          <h2 className="text-white text-2xl md:text-3xl font-extrabold tracking-wide drop-shadow-md">
+            THEO DÕI CHÚNG TÔI ĐỂ NHẬN MẪU MỚI HẰNG NGÀY
+          </h2>
 
-          {/* Danh sách website - nền trắng giữ nguyên */}
-          <div className="rounded-3xl p-10 bg-white ring-1 ring-gray-200 shadow-lg flex flex-col items-center justify-center">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-12 justify-items-center items-center w-full max-w-3xl">
-              {[
-                {
-                  logo: "/logo-webthamkhao/logo-kh-text.svg",
-                  url: "https://khunghinh.net",
-                },
-                {
-                  logo: "/logo-webthamkhao/image.png",
-                  url: "https://263.id.vn",
-                },
-              ].map((site) => (
+          {/* Container trắng giống section trên */}
+          <div className="mt-4 rounded-3xl bg-white/90 shadow-[0_10px_40px_-10px_rgba(0,0,0,.25)] ring-1 ring-blue-200/60 p-6 md:p-8 backdrop-blur">
+            <div className="text-center">
+              {/* Icon/Emoji */}
+
+
+              {/* Mô tả */}
+
+
+              {/* Buttons */}
+              <div className="flex justify-center gap-4 flex-wrap">
                 <a
-                  key={site.url}
-                  href={site.url}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50 transition-all duration-200 shadow-sm"
+                  href="#"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center w-52 h-24 md:w-60 md:h-28 transition-transform hover:scale-110 duration-300"
                 >
-                  <img
-                    src={site.logo}
-                    alt={site.url}
-                    className="max-w-full max-h-full object-contain"
-                    style={{ imageRendering: "crisp-edges" }}
-                    loading="lazy"
-                  />
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                  </svg>
+                  Facebook Page
                 </a>
-              ))}
+                <a
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50 transition-all duration-200 shadow-sm"
+                  href="#"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z" />
+                  </svg>
+                  Facebook Group
+                </a>
+              </div>
+
             </div>
           </div>
-
         </div>
-
       </section>
 
+      {/* ============ FAQ ============ */}
+      <section className="max-w-4xl mx-auto px-6 py-16">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900">
+            Câu hỏi thường gặp
+          </h2>
+          <p className="text-gray-600 mt-2">
+            Những thắc mắc phổ biến về dịch vụ của chúng tôi
+          </p>
+        </div>
 
-
-      {/* ============ FOLLOW ============ */}
-      <section className="max-w-7xl mx-auto px-6 py-12">
-        <div className="rounded-2xl p-6 text-center bg-white/80 ring-1 ring-gray-200 shadow-[0_10px_40px_-12px_rgba(0,0,0,.08)]">
-          <div className="text-gray-700 font-semibold mb-2">Theo dõi chúng tôi để nhận mẫu mới hằng ngày</div>
-          <div className="flex justify-center gap-3">
-            <a className="px-4 py-2 rounded-xl font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50" href="#">
-              Facebook Page
-            </a>
-            <a className="px-4 py-2 rounded-xl font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50" href="#">
-              Facebook Group
-            </a>
-          </div>
+        <div className="space-y-4">
+          {[
+            {
+              q: 'Tôi có thể tạo bao nhiêu khung hình?',
+              a: 'Không giới hạn! Bạn có thể tạo và tải về miễn phí không giới hạn số lượng.'
+            },
+            {
+              q: 'Khung hình có bản quyền không?',
+              a: 'Tất cả khung hình do chúng tôi cung cấp đều miễn phí sử dụng cho mục đích cá nhân và phi thương mại.'
+            },
+            {
+              q: 'Tôi có thể đóng góp khung hình không?',
+              a: 'Có! Bạn có thể đăng ký tài khoản và đăng tải khung hình của riêng mình để chia sẻ với cộng đồng.'
+            },
+            {
+              q: 'Làm sao để tải ảnh chất lượng cao?',
+              a: 'Sau khi chỉnh sửa, click nút "Tải về" để xuất ảnh với độ phân giải 1080x1080 pixels.'
+            }
+          ].map((item, i) => (
+            <details
+              key={i}
+              className="group rounded-2xl bg-white ring-1 ring-gray-200 hover:ring-blue-300 transition-all"
+            >
+              <summary className="cursor-pointer px-6 py-4 font-semibold text-gray-900 flex items-center justify-between">
+                {item.q}
+                <span className="text-blue-600 group-open:rotate-180 transition-transform">
+                  ▼
+                </span>
+              </summary>
+              <div className="px-6 pb-4 text-gray-600 border-t border-gray-100 pt-3">
+                {item.a}
+              </div>
+            </details>
+          ))}
         </div>
       </section>
     </div>
