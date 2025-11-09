@@ -372,9 +372,9 @@ export default function Editor() {
     return () => { if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl) }
   }, [lastObjectUrl])
 
-  // Thêm hàm format thời gian
+  // Thêm hàm formatTimeAgo (nếu chưa có)
   const formatTimeAgo = (dateString) => {
-    if (!dateString) return '';
+    if (!dateString) return 'Mới đăng';
 
     const now = new Date();
     const createdDate = new Date(dateString);
@@ -384,27 +384,19 @@ export default function Editor() {
     const diffHours = Math.floor(diffMinutes / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    // Nếu tạo trong ngày (< 24 giờ)
     if (diffDays === 0) {
-      if (diffHours > 0) {
-        return `${diffHours} giờ trước`;
-      } else if (diffMinutes > 0) {
-        return `${diffMinutes} phút trước`;
-      } else {
-        return diffSeconds > 0 ? `${diffSeconds} giây trước` : 'Vừa tạo';
-      }
+      if (diffHours > 0) return `${diffHours} giờ trước`;
+      if (diffMinutes > 0) return `${diffMinutes} phút trước`;
+      return diffSeconds > 0 ? `${diffSeconds} giây trước` : 'Vừa tạo';
     }
 
-    // Nếu trong vòng 7 ngày
     if (diffDays <= 7) {
       return `${diffDays} ngày trước`;
     }
 
-    // Lớn hơn 7 ngày: hiển thị ngày tháng năm
     const day = createdDate.getDate().toString().padStart(2, '0');
     const month = (createdDate.getMonth() + 1).toString().padStart(2, '0');
     const year = createdDate.getFullYear();
-
     return `${day}/${month}/${year}`;
   };
 

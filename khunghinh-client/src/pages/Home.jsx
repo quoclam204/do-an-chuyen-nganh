@@ -1,5 +1,5 @@
 // src/pages/Home.jsx
-import { Image as ImgIcon, ImageDown, Maximize2, Eye, Clock, User } from 'lucide-react'
+import { Image as ImgIcon, Maximize2, Eye, Clock, User } from 'lucide-react'
 import FrameGrid from '../components/FrameGrid'
 import FrameCardClassic from '../components/FrameCardClassic'
 import { useEffect, useMemo, useState } from 'react'
@@ -13,6 +13,22 @@ import { FileDown } from 'lucide-react'
 import { Link } from "react-router-dom";
 
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
+
+/* ===== RANK BADGE COMPONENT ===== */
+function RankBadge({ rank }) {
+  const getColor = () => {
+    if (rank === 1) return 'bg-gradient-to-br from-yellow-400 to-yellow-500 text-white'
+    if (rank === 2) return 'bg-gradient-to-br from-blue-400 to-blue-500 text-white'
+    if (rank === 3) return 'bg-gradient-to-br from-orange-400 to-orange-500 text-white'
+    return 'bg-gradient-to-br from-gray-400 to-gray-500 text-white'
+  }
+
+  return (
+    <div className={`absolute top-3 left-3 w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shadow-lg ${getColor()} border-4 border-white z-10`}>
+      {rank}
+    </div>
+  )
+}
 
 /* ===== NỀN XANH KIỂU CUBE (nâng cấp) ===== */
 function BlueCubesBackground() {
@@ -73,13 +89,21 @@ export default function Home() {
 
         if (res.ok) {
           const data = await res.json()
-          console.log('✅ Trending API response:', data)
 
           const mapped = data.map(item => {
             let imageUrl = item.thumb || item.UrlXemTruoc || item.urlXemTruoc
             if (imageUrl && !imageUrl.startsWith('http')) {
               imageUrl = `${BACKEND_ORIGIN}${imageUrl}`
             }
+
+            const ngayTao =
+              item.ngayTao ||
+              item.NgayTao ||
+              item.createdAt ||
+              item.CreatedAt ||
+              item.createdDate ||
+              item.CreatedDate ||
+              null
 
             return {
               id: item.id || item.Id,
@@ -88,20 +112,20 @@ export default function Home() {
               thumb: imageUrl,
               overlay: imageUrl,
 
-              // ✅ Lấy từ backend
               views: item.luotXem || item.LuotXem || 0,
-              downloads: item.luotTai || item.LuotTai || 0,
-              createdAt: item.ngayDang || item.NgayDang,
+
+              ngayTao: ngayTao,
 
               tag: 'Chiến dịch',
 
-              // ✅ Lấy owner từ backend
-              author: item.owner?.name || 'MARKETING VEC',
-              authorAvatar: item.owner?.avatar
+              owner: item.owner ? {
+                id: item.owner.id,
+                name: item.owner.name,
+                avatar: item.owner.avatar
+              } : null
             }
           })
 
-          console.log('✅ Mapped trending data:', mapped)
           setTrendingFrames(mapped)
         }
       } catch (e) {
@@ -132,7 +156,7 @@ export default function Home() {
   }, [frames]);
 
   const tools = [
-    { t: 'Nén ảnh', d: 'Giảm dung lượng ảnh dễ dàng', to: '/compress', icon: <ImageDown className="w-6 h-6" /> },
+    { t: 'Nén ảnh', d: 'Giảm dung lượng ảnh dễ dàng', to: '/compress', icon: <Maximize2 className="w-6 h-6" /> },
     { t: 'Thay đổi kích thước', d: 'Resize ảnh theo kích thước mong muốn', to: '/resize', icon: <Maximize2 className="w-6 h-6" /> },
     { t: 'Ảnh → PDF', d: 'Gộp nhiều ảnh thành một PDF', to: '/image-to-pdf', icon: <FileDown className="w-6 h-6" /> },
   ];
@@ -141,13 +165,43 @@ export default function Home() {
     if (typeof f.isNew === 'boolean') return f.isNew;
 
     const iso =
-      f.ngayDang || f.NgayDang || f.ngayTao || f.NgayTao ||
+      f.ngayTao || f.NgayTao ||
       f.createdAt || f.date;
     if (!iso) return false;
 
     const created = new Date(iso);
     const hours = (Date.now() - created.getTime()) / 36e5;
     return hours <= 24;
+  };
+
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return 'Mới đăng';
+
+    const now = new Date();
+    const createdDate = new Date(dateString);
+
+    if (isNaN(createdDate.getTime())) return 'Mới đăng';
+
+    const diffMs = now.getTime() - createdDate.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays === 0) {
+      if (diffHours > 0) return `${diffHours} giờ trước`;
+      if (diffMinutes > 0) return `${diffMinutes} phút trước`;
+      return diffSeconds > 0 ? `${diffSeconds} giây trước` : 'Vừa tạo';
+    }
+
+    if (diffDays <= 7) {
+      return `${diffDays} ngày trước`;
+    }
+
+    const day = createdDate.getDate().toString().padStart(2, '0');
+    const month = (createdDate.getMonth() + 1).toString().padStart(2, '0');
+    const year = createdDate.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   return (
@@ -316,15 +370,78 @@ export default function Home() {
             {trendingFrames.map((f, idx) => (
               <MotionCard i={idx} key={f.alias} className="h-full">
                 <div className="shine-safe hover-lift transform-gpu">
-                  <FrameCardClassic
-                    frame={{
-                      ...f,
-                      date: f.createdAt ? formatDate(f.createdAt) : '2 ngày trước',
-                    }}
-                    rank={idx + 1}
-                    theme="blue"
-                    onUse={() => nav(`/editor?alias=${f.alias}`)}
-                  />
+                  <div className="bg-white rounded-2xl overflow-hidden ring-1 ring-gray-200 hover:ring-blue-300 transition-all shadow-sm hover:shadow-lg">
+                    {/* Hình ảnh khung */}
+                    <button
+                      onClick={() => nav(`/editor?alias=${f.alias}`)}
+                      className="relative w-full aspect-square bg-gray-50 overflow-hidden group"
+                    >
+                      <img
+                        src={f.thumb}
+                        alt={f.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+
+                      {/* Huy hiệu xếp hạng */}
+                      <RankBadge rank={idx + 1} />
+
+                      {/* Badge NEW */}
+                      {isNew(f) && (
+                        <div className="absolute top-3 right-3 px-2 py-1 rounded-md bg-gradient-to-r from-rose-500 to-orange-500 text-white text-xs font-bold shadow-md animate-pulse">
+                          NEW
+                        </div>
+                      )}
+                    </button>
+
+                    {/* Thông tin khung */}
+                    <div className="p-4">
+                      {/* Tên khung */}
+                      <h3 className="font-bold text-gray-900 mb-3 line-clamp-2 min-h-[3rem]">
+                        {f.name}
+                      </h3>
+
+                      {/* Đường kẻ ngăn cách */}
+                      <div className="border-t border-gray-200 mb-3"></div>
+
+                      {/* Thông tin người tạo */}
+                      {f.owner && (
+                        <div className="flex items-center gap-2 mb-3">
+                          <img
+                            src={f.owner.avatar || '/icon/default-avatar.png'}
+                            alt={f.owner.name}
+                            className="w-8 h-8 rounded-full object-cover border-2 border-gray-200"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm text-gray-900 truncate">
+                              {f.owner.name}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Ngày tạo */}
+                      {f.ngayTao && (
+                        <div className="flex items-center text-gray-600 text-sm mb-2">
+                          <Clock className="w-4 h-4 mr-1.5 flex-shrink-0" />
+                          <span className="font-medium">{formatTimeAgo(f.ngayTao)}</span>
+                        </div>
+                      )}
+
+                      {/* Lượt xem */}
+                      <div className="flex items-center text-gray-600 text-sm mb-4">
+                        <Eye className="w-4 h-4 mr-1.5 flex-shrink-0" />
+                        <span className="font-medium">{f.views || 0}</span>
+                      </div>
+
+                      {/* Nút sử dụng */}
+                      <button
+                        onClick={() => nav(`/editor?alias=${f.alias}`)}
+                        className="w-full px-4 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors"
+                      >
+                        Sử dụng ngay
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </MotionCard>
             ))}
@@ -430,19 +547,14 @@ export default function Home() {
   )
 }
 
-// ✅ Helper function format ngày
-function formatDate(dateString) {
-  if (!dateString) return '2 ngày trước'
 
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now - date
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
-  if (diffDays === 0) return 'Hôm nay'
-  if (diffDays === 1) return 'Hôm qua'
-  if (diffDays < 7) return `${diffDays} ngày trước`
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} tuần trước`
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)} tháng trước`
-  return date.toLocaleDateString('vi-VN')
-}
+
+
+
+
+
+
+
+
+

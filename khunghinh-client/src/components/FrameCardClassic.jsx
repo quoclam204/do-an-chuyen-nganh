@@ -1,115 +1,113 @@
 // src/components/FrameCardClassic.jsx
 import { useNavigate } from "react-router-dom"
+import { Eye, ImageDown, Clock } from "lucide-react"
 
-export default function FrameCardClassic({ frame, rank, onUse }) {
+export default function FrameCardClassic({ frame }) {
   const nav = useNavigate()
 
-  const {
-    alias = "",
-    name = "Khung chưa đặt tên",
-    thumb,
-    overlay,
-    tag = "Chiến dịch",
-    author = "MARKETING VEC",
-    date = "2 ngày trước",
-    views = 0,
-  } = frame
-
-  const src = thumb || overlay
-
-  // màu badge xếp hạng
-  const badgeColors = ["bg-yellow-400", "bg-sky-400", "bg-purple-400", "bg-blue-400"]
-  const badge = badgeColors[Math.min((rank || 1) - 1, 3)] || "bg-gray-300"
-
-  // màu tag theo loại
-  const tagColors = {
-    "Chiến dịch": "bg-emerald-100 text-emerald-700",
-    "Sự kiện": "bg-pink-100 text-pink-600",
-    "Lễ hội": "bg-sky-100 text-sky-700",
+  const isNew = () => {
+    if (typeof frame.isNew === "boolean") return frame.isNew
+    const iso = frame.ngayTao || frame.NgayTao || frame.createdAt || frame.date
+    if (!iso) return false
+    const created = new Date(iso)
+    const hours = (Date.now() - created.getTime()) / 36e5
+    return hours <= 24
   }
-  const tagClass = tagColors[tag] || "bg-gray-100 text-gray-700"
+
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return "Mới đăng"
+
+    const now = new Date()
+    const createdDate = new Date(dateString)
+
+    if (isNaN(createdDate.getTime())) return "Mới đăng"
+
+    const diffMs = now.getTime() - createdDate.getTime()
+    const diffSeconds = Math.floor(diffMs / 1000)
+    const diffMinutes = Math.floor(diffSeconds / 60)
+    const diffHours = Math.floor(diffMinutes / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffDays === 0) {
+      if (diffHours > 0) return `${diffHours} giờ trước`
+      if (diffMinutes > 0) return `${diffMinutes} phút trước`
+      return diffSeconds > 0 ? `${diffSeconds} giây trước` : "Vừa tạo"
+    }
+
+    if (diffDays <= 7) return `${diffDays} ngày trước`
+
+    const day = createdDate.getDate().toString().padStart(2, "0")
+    const month = (createdDate.getMonth() + 1).toString().padStart(2, "0")
+    const year = createdDate.getFullYear()
+    return `${day}/${month}/${year}`
+  }
 
   return (
-    // KHÔNG ẩn tràn ở root để badge có thể “lồi” ra ngoài
-    <div className="relative overflow-visible">
-      {/* Badge xếp hạng */}
-      {rank && (
-        <div
-          className={`absolute -top-3 -left-3 z-20 h-8 w-8 rounded-full grid place-items-center text-white text-sm font-bold shadow ${badge}`}
-          aria-label={`Hạng ${rank}`}
+    <div className="shine-safe hover-lift transform-gpu">
+      <div className="bg-white rounded-2xl overflow-hidden ring-1 ring-gray-200 hover:ring-blue-300 transition-all shadow-sm hover:shadow-lg">
+        {/* Hình ảnh khung */}
+        <button
+          onClick={() => nav(`/editor?alias=${frame.alias}`)}
+          className="relative w-full aspect-square bg-gray-50 overflow-hidden group"
         >
-          {rank}
-        </div>
-      )}
-
-      {/* Thân card: KHÔNG overflow-hidden, thêm hover mượt */}
-      <div className="rounded-[20px] bg-white shadow-md ring-1 ring-gray-200 flex flex-col transform-gpu transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
-        {/* Ảnh: chỉ phần này ẩn tràn */}
-        <div className="px-6 pt-6">
-          <div className="rounded-[16px] overflow-hidden ring-1 ring-gray-200 bg-white">
-            {/* Tỉ lệ vuông, không méo ảnh */}
-            <div className="aspect-square">
-              <img
-                src={src}
-                alt={name}
-                className="w-full h-full object-contain p-2 block transition-transform duration-300 will-change-transform"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
+          <img
+            src={frame.thumb || frame.overlay}
+            alt={frame.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+          {isNew() && (
+            <div className="absolute top-3 right-3 px-2 py-1 rounded-md bg-gradient-to-r from-rose-500 to-orange-500 text-white text-xs font-bold shadow-md animate-pulse">
+              NEW
             </div>
-          </div>
-        </div>
+          )}
+        </button>
 
-        {/* Tiêu đề + tag */}
-        <div className="px-6 pt-4">
-          <h3 className="text-base font-semibold leading-snug line-clamp-2 text-gray-900">
-            {name}
+        {/* Thông tin khung */}
+        <div className="p-4">
+          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">
+            {frame.name}
           </h3>
-          <div className="mt-2">
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${tagClass}`}>
-              {tag}
-            </span>
-          </div>
-        </div>
 
-        {/* Divider */}
-        <div className="px-6">
-          <div className="h-px w-full bg-gray-200 my-4" />
-        </div>
-
-        {/* Meta */}
-        <div className="px-6 pb-2 text-sm">
-          <div className="flex items-center gap-2 text-gray-800">
-            <span className="h-7 w-7 rounded-full bg-gray-200 grid place-items-center text-[11px] font-bold text-gray-700">
-              {(author || "M")[0]}
-            </span>
-            <span className="font-medium">{author}</span>
-          </div>
-          <div className="mt-2 space-y-2 text-gray-500 text-[13px]">
-            <div className="flex items-center gap-2">
-              <span>🕒</span>
-              <span>{date}</span>
+          {/* ✅ THÊM: Thông tin người tạo */}
+          {frame.owner && (
+            <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100">
+              <img
+                src={frame.owner.avatar || "/icon/default-avatar.png"}
+                alt={frame.owner.name}
+                className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-sm text-gray-900 truncate">
+                  {frame.owner.name}
+                </div>
+                {frame.ngayTao && (
+                  <div className="flex items-center text-gray-500 text-xs mt-0.5">
+                    <Clock className="w-3 h-3 mr-1" />
+                    {formatTimeAgo(frame.ngayTao)}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span>👁</span>
-              <span>{Intl.NumberFormat("vi-VN").format(views)}</span>
+          )}
+
+          {/* Thống kê */}
+          <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
+            <div className="flex items-center gap-1">
+              <Eye className="w-4 h-4" />
+              <span className="font-semibold">{frame.views || 0}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <ImageDown className="w-4 h-4" />
+              <span className="font-semibold">{frame.downloads || 0}</span>
             </div>
           </div>
-        </div>
 
-        <div className="px-6 pb-6 pt-2">
+          {/* Nút sử dụng */}
           <button
-            onClick={() => {
-              window.scrollTo(0, 0)                   // 👈 cuộn lên đầu ngay khi bấm
-              if (onUse) {
-                onUse(frame)
-              } else {
-                nav(`/editor?alias=${alias}`)        // rồi mới điều hướng sang Editor
-              }
-            }}
-            className="w-full rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 transition active:scale-[.98] shadow-sm"
+            onClick={() => nav(`/editor?alias=${frame.alias}`)}
+            className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors"
           >
-            Thử khung này
+            Sử dụng ngay
           </button>
         </div>
       </div>

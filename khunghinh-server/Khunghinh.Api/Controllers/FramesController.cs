@@ -205,7 +205,7 @@ namespace Khunghinh.Api.Controllers
                     x.TieuDe,
                     x.Alias,
                     x.UrlXemTruoc,
-                    x.NgayDang,
+                    x.NgayDang, // ✅ Được serialize thành ngayDang
                     x.LuotXem,  // ✅ Thêm
                     x.LuotTai,  // ✅ Thêm
                     owner = x.ChuSoHuu == null ? null : new
@@ -480,9 +480,12 @@ namespace Khunghinh.Api.Controllers
                             alias = frame.Alias,
                             thumb = frame.UrlXemTruoc,
 
-                            // ✅ Trả về tổng lượt xem/tải (giống FrameDetail)
+                            // ✅ Trả về tổng lượt xem/tải
                             luotXem = frame.LuotXem,
                             luotTai = frame.LuotTai,
+
+                            // ✅ THÊM TRƯỜNG NGÀY TẠO
+                            ngayTao = frame.NgayDang,
 
                             // Giữ lại data 24h cho ranking
                             views24h = t.Views24h,
@@ -507,5 +510,6 @@ namespace Khunghinh.Api.Controllers
                 return StatusCode(500, "Lỗi server");
             }
         }
+
     }
 }
