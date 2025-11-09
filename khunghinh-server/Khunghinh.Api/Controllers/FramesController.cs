@@ -272,16 +272,18 @@ namespace Khunghinh.Api.Controllers
             frame.LuotXem += 1;
             await _db.SaveChangesAsync();
 
+            // ✅ Trả về camelCase để frontend dễ dùng
             return Ok(new
             {
-                frame.Id,
-                frame.TieuDe,
-                frame.Alias,
-                frame.UrlXemTruoc,
-                frame.LuotXem,
-                frame.LuotTai
+                id = frame.Id,
+                tieuDe = frame.TieuDe,
+                alias = frame.Alias,
+                urlXemTruoc = frame.UrlXemTruoc,
+                luotXem = frame.LuotXem,  // ✅ camelCase
+                luotTai = frame.LuotTai   // ✅ camelCase
             });
         }
+
 
         // Tăng lượt tải
         [HttpPost("download/{id:long}")]
@@ -294,14 +296,15 @@ namespace Khunghinh.Api.Controllers
             frame.LuotTai += 1;
             await _db.SaveChangesAsync();
 
+            // ✅ Trả về camelCase
             return Ok(new
             {
-                frame.Id,
-                frame.TieuDe,
-                frame.Alias,
-                frame.UrlXemTruoc,
-                frame.LuotXem,
-                frame.LuotTai
+                id = frame.Id,
+                tieuDe = frame.TieuDe,
+                alias = frame.Alias,
+                urlXemTruoc = frame.UrlXemTruoc,
+                luotXem = frame.LuotXem,  // ✅ camelCase
+                luotTai = frame.LuotTai   // ✅ camelCase
             });
         }
 

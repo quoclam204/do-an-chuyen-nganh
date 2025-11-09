@@ -6,6 +6,9 @@ import useImage from 'use-image'
 import { Stage, Layer, Image as KImage, Rect, Group, Text as KText, Circle } from 'react-konva'
 import NotFound from '../components/NotFound'
 
+// ✅ Thêm BACKEND_ORIGIN
+const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
+
 const EXPORT_SIZE = 1080
 const PREVIEW_MAX = 500
 const PREVIEW_MIN = 300
@@ -160,7 +163,7 @@ export default function Editor() {
     let alive = true
     setFrame(null)
     setFrameError('')
-    setFrameLoading(true) // ✅ Bắt đầu loading
+    setFrameLoading(true)
 
     // Gọi API: -> chạy hàm GetByAlias(backend)
     getFrameByAlias(alias)
@@ -170,13 +173,30 @@ export default function Editor() {
           if (!f) {
             setFrameError('Không tìm thấy khung cho alias này.')
           }
-          setFrameLoading(false) // ✅ Kết thúc loading
+          setFrameLoading(false)
+
+          // ✅ Gọi API tăng lượt xem SAU KHI có frame
+          if (f?.id) {
+            fetch(`${BACKEND_ORIGIN}/api/Frames/view/${f.id}`, {
+              method: 'POST',
+              credentials: 'include'
+            })
+              .then(res => res.json())
+              .then(data => {
+                console.log('✅ View counted:', data)
+                // ✅ Backend trả về camelCase
+                if (data.luotXem !== undefined) {
+                  setFrame(prev => prev ? { ...prev, clicks: data.luotXem } : prev)
+                }
+              })
+              .catch(err => console.error('❌ View count failed:', err))
+          }
         }
       })
       .catch(() => {
         if (alive) {
           setFrameError('Không tải được khung (overlay).')
-          setFrameLoading(false) // ✅ Kết thúc loading
+          setFrameLoading(false)
         }
       })
 
@@ -259,24 +279,80 @@ export default function Editor() {
     return { x: clamp(pos.x, -limit, limit), y: clamp(pos.y, -limit, limit) }
   }
 
-  const downloadPNG = () => {
+  const downloadPNG = async () => {
     const node = stageRef.current
     if (!node) return
+
     const pixelRatio = EXPORT_SIZE / viewSize
+
     try {
       const dataURL = node.toDataURL({ pixelRatio, mimeType: 'image/png', quality: 1 })
-      const a = document.createElement('a')
-      a.href = dataURL
-      a.download = `${alias}.png`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
+
+      // ✅ Chuyển dataURL sang Blob
+      const response = await fetch(dataURL)
+      const blob = await response.blob()
+
+      // ✅ Dùng showSaveFilePicker (Chrome 86+)
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: `${alias}.png`,
+            types: [{
+              description: 'PNG Image',
+              accept: { 'image/png': ['.png'] }
+            }]
+          })
+
+          const writable = await handle.createWritable()
+          await writable.write(blob)
+          await writable.close()
+
+          // ✅ Chỉ tăng lượt tải SAU KHI file đã lưu thành công
+          if (frame?.id) {
+            const res = await fetch(`${BACKEND_ORIGIN}/api/Frames/download/${frame.id}`, {
+              method: 'POST',
+              credentials: 'include'
+            })
+            const data = await res.json()
+            console.log('✅ Download counted:', data)
+
+            if (data.luotTai !== undefined) {
+              setFrame(prev => prev ? { ...prev, uses: data.luotTai } : prev)
+            }
+          }
+
+        } catch (err) {
+          // Người dùng nhấn Cancel
+          console.log('❌ User cancelled download')
+          return
+        }
+      } else {
+        // ⚠️ Fallback cho browser cũ: dùng <a> download (không detect cancel)
+        const a = document.createElement('a')
+        a.href = dataURL
+        a.download = `${alias}.png`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+
+        // Tăng lượt tải với delay
+        setTimeout(async () => {
+          if (frame?.id) {
+            const res = await fetch(`${BACKEND_ORIGIN}/api/Frames/download/${frame.id}`, {
+              method: 'POST',
+              credentials: 'include'
+            })
+            const data = await res.json()
+            if (data.luotTai !== undefined) {
+              setFrame(prev => prev ? { ...prev, uses: data.luotTai } : prev)
+            }
+          }
+        }, 500)
+      }
+
     } catch (err) {
       console.error('Save failed:', err)
-      alert(
-        'Không thể tải ảnh.\nCó thể do ảnh khung/overlay hoặc ảnh tải lên không cho phép CORS.\n' +
-        'Hãy host file overlay/ảnh cùng domain hoặc bật Access-Control-Allow-Origin: *.'
-      )
+      alert('Không thể tải ảnh.')
     }
   }
 
