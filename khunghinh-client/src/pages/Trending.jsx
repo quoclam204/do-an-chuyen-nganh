@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye } from 'lucide-react'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://localhost:7090'
+const BACKEND_ORIGIN = (import.meta.env.VITE_API_URL || 'https://localhost:7090').replace(/\/$/, '')
 
 function RankBadge({ rank }) {
   const getColor = () => {
@@ -31,7 +31,7 @@ export default function Trending() {
 
     const fetchTrending = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/frames/trending?take=10`, {
+        const res = await fetch(`${BACKEND_ORIGIN}/api/frames/trending?take=10`, {
           credentials: 'include',
           signal: ac.signal
         })
@@ -46,7 +46,7 @@ export default function Trending() {
         const transformedData = data.map(item => {
           let imageUrl = item.thumb || item.UrlXemTruoc || item.urlXemTruoc
           if (imageUrl && !imageUrl.startsWith('http')) {
-            imageUrl = `${API_URL}${imageUrl}`
+            imageUrl = `${BACKEND_ORIGIN}${imageUrl}`
           }
 
           return {

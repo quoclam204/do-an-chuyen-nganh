@@ -12,6 +12,8 @@ import { FileDown } from 'lucide-react'
 
 import { Link } from "react-router-dom";
 
+const BACKEND_ORIGIN = (import.meta.env.VITE_API_URL || 'https://localhost:7090').replace(/\/$/, '')
+
 /* ===== NỀN XANH KIỂU CUBE (nâng cấp) ===== */
 function BlueCubesBackground() {
   return (
@@ -65,8 +67,7 @@ export default function Home() {
 
     const fetchTrending = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'https://localhost:7090'
-        const res = await fetch(`${API_URL}/api/frames/trending?take=4`, {
+        const res = await fetch(`${BACKEND_ORIGIN}/api/frames/trending?take=4`, {
           credentials: 'include'
         })
 
@@ -77,7 +78,7 @@ export default function Home() {
           const mapped = data.map(item => {
             let imageUrl = item.thumb || item.UrlXemTruoc || item.urlXemTruoc
             if (imageUrl && !imageUrl.startsWith('http')) {
-              imageUrl = `${API_URL}${imageUrl}`
+              imageUrl = `${BACKEND_ORIGIN}${imageUrl}`
             }
 
             return {
