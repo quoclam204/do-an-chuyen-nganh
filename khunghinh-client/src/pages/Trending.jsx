@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye } from 'lucide-react'
 
-const BACKEND_ORIGIN = (import.meta.env.VITE_API_URL || 'https://localhost:7090').replace(/\/$/, '')
+// ✅ Đổi từ VITE_API_URL sang VITE_API_ORIGIN
+const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 
 function RankBadge({ rank }) {
   const getColor = () => {
     if (rank === 1) return 'bg-yellow-400 text-white'
     if (rank === 2) return 'bg-blue-500 text-white'
     if (rank === 3) return 'bg-orange-500 text-white'
-    // ✅ Từ rank 4-10 màu xám
     return 'bg-gray-400 text-white'
   }
 

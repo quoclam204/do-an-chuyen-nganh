@@ -12,7 +12,7 @@ import { FileDown } from 'lucide-react'
 
 import { Link } from "react-router-dom";
 
-const BACKEND_ORIGIN = (import.meta.env.VITE_API_URL || 'https://localhost:7090').replace(/\/$/, '')
+const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 
 /* ===== NỀN XANH KIỂU CUBE (nâng cấp) ===== */
 function BlueCubesBackground() {
