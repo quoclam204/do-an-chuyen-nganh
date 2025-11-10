@@ -241,7 +241,7 @@ namespace Khunghinh.Api.Controllers
                     name = u.TenHienThi,
                     avatar = u.AnhDaiDienUrl,
                     role = u.VaiTro,
-                    isSuper = EF.Property<bool>(u, "IsSuperAdmin"), // đọc cột IsSuperAdmin nếu có
+                    isSuper = u.IsSuperAdmin, // ✅ Truy cập trực tiếp property
                     status = u.TrangThai,
                     u.NgayTao,
                     u.NgayCapNhat
@@ -250,227 +250,224 @@ namespace Khunghinh.Api.Controllers
             return Ok(new { total, page, pageSize, items });
         }
 
-        // POST /api/admin/users/{id}/role  body: { "role": "admin" }  (hỗ trợ "superadmin" như giá trị đặc biệt)
+        // POST /api/admin/users/{id}/role
+        // Body: { "role": "user" | "admin" | "superadmin" }
         [HttpPost("users/{id:long}/role")]
         public async Task<IActionResult> ChangeUserRole(long id, [FromBody] ChangeRoleDto dto)
         {
-            if (dto == null || string.IsNullOrWhiteSpace(dto.Role)) return BadRequest("role is required");
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Role)) 
+                return BadRequest("role is required");
 
             var targetUser = await _db.NguoiDungs.FindAsync(id);
             if (targetUser == null) return NotFound();
 
-            // caller
-            var callerEmail = User.Claims.FirstOrDefault(c => c.Type.Contains("email"))?.Value;
-            var caller = string.IsNullOrEmpty(callerEmail) ? null : await _db.NguoiDungs.FirstOrDefaultAsync(u => u.Email == callerEmail);
+            // Lấy thông tin caller
+            var caller = await GetCallerAsync();
             if (caller == null) return Forbid("Caller information not found.");
 
-            // chuẩn hoá
+            // Chuẩn hóa
             string Norm(string? r) => (r ?? "user").Trim().ToLowerInvariant();
-            var beforeRole = (targetUser.VaiTro ?? "user").Trim();
             var callerRole = Norm(caller.VaiTro);
-            var targetRole = Norm(beforeRole);
+            var targetRole = Norm(targetUser.VaiTro);
             var newRole = Norm(dto.Role.Trim());
 
-            bool callerIsSuper = false;
-            bool targetIsSuper = false;
-            try { callerIsSuper = EF.Property<bool>(caller, "IsSuperAdmin"); } catch { }
-            try { targetIsSuper = EF.Property<bool>(targetUser, "IsSuperAdmin"); } catch { }
+            bool callerIsSuper = caller.IsSuperAdmin;
+            bool targetIsSuper = targetUser.IsSuperAdmin;
 
-            // Các ràng buộc business cơ bản (same as before)
-            if (caller.Id == targetUser.Id) return BadRequest("Không được tự hạ quyền của chính bạn qua API.");
-            if (targetIsSuper && !callerIsSuper) return Forbid("Chỉ Super Admin mới có quyền thay đổi Super Admin.");
-            if (callerRole == "admin" && targetRole != "user") return Forbid("Admin chỉ có thể thao tác trên người dùng bình thường.");
+            // ===========================
+            // RÀNG BUỘC BẢO MẬT
+            // ===========================
+
+            // 1. Không tự thay đổi quyền
+            if (caller.Id == targetUser.Id)
+                return BadRequest("Không được tự thay đổi quyền của chính bạn qua API.");
+
+            // 2. Chỉ SuperAdmin động SuperAdmin
+            if (targetIsSuper && !callerIsSuper)
+                return Forbid("Chỉ Super Admin mới có quyền thay đổi Super Admin.");
+
+            // 3. Admin thường chỉ động user
+            if (callerRole == "admin" && !callerIsSuper && targetRole != "user")
+                return Forbid("Admin chỉ có thể thao tác trên người dùng bình thường.");
 
             try
             {
-                // Nếu yêu cầu thăng admin từ user -> gọi sp_PromoteToAdmin (chỉ super thực hiện)
+                // ===========================
+                // XỬ LÝ THAY ĐỔI QUYỀN
+                // ===========================
+
+                // CASE 1: Thăng user → admin
                 if (newRole == "admin" && targetRole == "user")
                 {
-                    if (!callerIsSuper) return Forbid("Chỉ Super Admin mới có quyền thăng admin.");
-                    await _db.Database.ExecuteSqlRawAsync("EXEC dbo.sp_PromoteToAdmin @ActorId = {0}, @TargetId = {1}", caller.Id, targetUser.Id);
+                    if (!callerIsSuper) 
+                        return Forbid("Chỉ Super Admin mới có quyền thăng admin.");
+                    
+                    await _db.Database.ExecuteSqlRawAsync(
+                        "EXEC dbo.sp_PromoteToAdmin @ActorId = {0}, @TargetId = {1}", 
+                        caller.Id, targetUser.Id);
                 }
-                // Nếu hạ admin về user -> gọi sp_DemoteToUser (chỉ super)
+                // CASE 2: Hạ admin → user
                 else if (newRole == "user" && targetRole == "admin")
                 {
-                    if (!callerIsSuper) return Forbid("Chỉ Super Admin mới có quyền hạ admin.");
-                    await _db.Database.ExecuteSqlRawAsync("EXEC dbo.sp_DemoteToUser @ActorId = {0}, @TargetId = {1}", caller.Id, targetUser.Id);
+                    if (!callerIsSuper) 
+                        return Forbid("Chỉ Super Admin mới có quyền hạ admin.");
+                    
+                    await _db.Database.ExecuteSqlRawAsync(
+                        "EXEC dbo.sp_DemoteToUser @ActorId = {0}, @TargetId = {1}", 
+                        caller.Id, targetUser.Id);
                 }
-                // Xử lý superadmin flag -> gọi sp_SetSuperAdmin (chỉ super)
-                else if (newRole == "superadmin")
+                // CASE 3: Đặt SuperAdmin (✅ Cho phép nhiều)
+                else if (newRole == "superadmin" && !targetIsSuper)
                 {
-                    if (!callerIsSuper) return Forbid("Chỉ Super Admin mới có quyền thăng Super Admin.");
-                    await _db.Database.ExecuteSqlRawAsync("EXEC dbo.sp_SetSuperAdmin @ActorId = {0}, @TargetId = {1}, @IsSuperAdmin = {2}", caller.Id, targetUser.Id, 1);
+                    if (!callerIsSuper) 
+                        return Forbid("Chỉ Super Admin mới có quyền thăng Super Admin.");
+                    
+                    await _db.Database.ExecuteSqlRawAsync(
+                        "EXEC dbo.sp_SetSuperAdmin @ActorId = {0}, @TargetId = {1}, @IsSuperAdmin = {2}", 
+                        caller.Id, targetUser.Id, 1);
                 }
+                // CASE 4: Gỡ SuperAdmin
                 else if (targetIsSuper && newRole != "superadmin")
                 {
-                    // hạ SuperAdmin (chỉ super), sử dụng sp_SetSuperAdmin để tránh trigger
-                    if (!callerIsSuper) return Forbid("Chỉ Super Admin mới có quyền hạ Super Admin.");
-                    await _db.Database.ExecuteSqlRawAsync("EXEC dbo.sp_SetSuperAdmin @ActorId = {0}, @TargetId = {1}, @IsSuperAdmin = {2}", caller.Id, targetUser.Id, 0);
+                    if (!callerIsSuper) 
+                        return Forbid("Chỉ Super Admin mới có quyền hạ Super Admin.");
+                    
+                    await _db.Database.ExecuteSqlRawAsync(
+                        "EXEC dbo.sp_SetSuperAdmin @ActorId = {0}, @TargetId = {1}, @IsSuperAdmin = {2}", 
+                        caller.Id, targetUser.Id, 0);
 
-                    // nếu muốn đổi VaiTro xuống user luôn, gọi sp_DemoteToUser nếu trước đó là admin và cần xuống user
                     if (newRole == "user")
                     {
-                        await _db.Database.ExecuteSqlRawAsync("EXEC dbo.sp_DemoteToUser @ActorId = {0}, @TargetId = {1}", caller.Id, targetUser.Id);
+                        await _db.Database.ExecuteSqlRawAsync(
+                            "EXEC dbo.sp_DemoteToUser @ActorId = {0}, @TargetId = {1}", 
+                            caller.Id, targetUser.Id);
                     }
                 }
+                // CASE 5: Thay đổi thông thường
                 else
                 {
-                    // các thay đổi thông thường không ảnh hưởng admin/super: cập nhật trực tiếp
-                    if (newRole == "user" || newRole == "admin")
-                    {
-                        targetUser.VaiTro = newRole;
-                        targetUser.NgayCapNhat = DateTime.UtcNow;
-                        await _db.SaveChangesAsync();
-                    }
-                    else
-                    {
+                    if (newRole != "user" && newRole != "admin")
                         return BadRequest("role must be 'user', 'admin' or 'superadmin'.");
-                    }
+
+                    targetUser.VaiTro = newRole;
+                    targetUser.NgayCapNhat = DateTime.UtcNow;
+                    await _db.SaveChangesAsync();
                 }
 
-                // Reload target để trả về trạng thái mới
-                var updated = await _db.NguoiDungs.AsNoTracking().FirstOrDefaultAsync(u => u.Id == targetUser.Id);
-                bool updatedIsSuper = false;
-                try { updatedIsSuper = EF.Property<bool>(updated, "IsSuperAdmin"); } catch { }
+                // Reload
+                var updated = await _db.NguoiDungs
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Id == targetUser.Id);
 
                 return Ok(new
                 {
                     success = true,
                     before = new { role = targetRole, isSuper = targetIsSuper },
-                    after = new { role = updated?.VaiTro, isSuper = updatedIsSuper }
+                    after = new { role = updated?.VaiTro, isSuper = updated?.IsSuperAdmin ?? false }
                 });
             }
             catch (DbUpdateException dbex)
             {
-                // SQL trigger/constraint message thường nằm ở InnerException
                 var msg = dbex.InnerException?.Message ?? dbex.Message;
-                Console.WriteLine("[ChangeUserRole] DB error: " + msg);
+                Console.WriteLine($"[ChangeUserRole] DB error: {msg}");
                 return Problem(detail: msg, statusCode: 500);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[ChangeUserRole] Exception: " + ex);
+                Console.WriteLine($"[ChangeUserRole] Exception: {ex}");
                 return Problem(detail: ex.Message, statusCode: 500);
             }
         }
 
-        // POST /api/admin/users/{id}/ban  body: { "reason": "..." }
+        // POST /api/admin/users/{id}/ban
         [HttpPost("users/{id:long}/ban")]
         public async Task<IActionResult> BanUser(long id, [FromBody] BanUserDto dto)
         {
+            // 1️⃣ Lấy thông tin target user
             var targetUser = await _db.NguoiDungs.FindAsync(id);
             if (targetUser == null) return NotFound();
 
-            // Lấy caller
-            var callerEmail = User.Claims.FirstOrDefault(c => c.Type.Contains("email"))?.Value;
-            var caller = string.IsNullOrEmpty(callerEmail) ? null : await _db.NguoiDungs.FirstOrDefaultAsync(u => u.Email == callerEmail);
+            // 2️⃣ Lấy thông tin admin đang thực hiện (caller)
+            var caller = await GetCallerAsync();
             if (caller == null) return Forbid("Caller information not found.");
 
-            string Norm(string? r) => (r ?? "user").Trim().ToLowerInvariant();
-            var callerRole = Norm(caller.VaiTro);
-            var targetRole = Norm(targetUser.VaiTro);
+            bool callerIsSuper = caller.IsSuperAdmin;
+            bool targetIsSuper = targetUser.IsSuperAdmin;
+            string targetRole = (targetUser.VaiTro ?? "user").Trim().ToLowerInvariant();
 
-            bool callerIsSuper = false;
-            bool targetIsSuper = false;
-            try { callerIsSuper = EF.Property<bool>(caller, "IsSuperAdmin"); } catch { }
-            try { targetIsSuper = EF.Property<bool>(targetUser, "IsSuperAdmin"); } catch { }
+            // ===========================
+            // 3️⃣ KIỂM TRA QUYỀN HẠN
+            // ===========================
 
-            // Không cho tự khóa bản thân qua API
+            // ❌ Không tự khóa bản thân
             if (caller.Id == targetUser.Id)
                 return BadRequest("Không thể tự khóa tài khoản của chính bạn qua API.");
-
-            // Superadmin không thể bị khóa bởi admin; chỉ superadmin có thể khóa superadmin
+            if (callerIsSuper)
+            // ❌ SuperAdmin chỉ bị SuperAdmin khác khóa
             if (targetIsSuper && !callerIsSuper)
-                return Forbid("Chỉ Super Admin mới có quyền khóa Super Admin.");
+                return Forbid("Chỉ Super Admin mới có quyền khóa Super Admin khác.");
 
-            // Admin không được khóa admin khác (chỉ superadmin được)
+            // ❌ Admin thường không khóa được admin
             if (targetRole == "admin" && !callerIsSuper)
                 return Forbid("Chỉ Super Admin mới có quyền khóa admin.");
 
-            // Nếu tất cả ok -> khóa
-            var before = targetUser.TrangThai;
-            targetUser.TrangThai = "bi_khoa";
-            targetUser.NgayCapNhat = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+            // ===========================
+            // 4️⃣ THỰC HIỆN KHÓA
+            // ===========================
+            try
+            {
+                // Gọi stored procedure
+                await _db.Database.ExecuteSqlRawAsync(
+                    "EXEC dbo.sp_LockUser @ActorId = {0}, @TargetId = {1}, @Reason = {2}", 
+                    caller.Id, targetUser.Id, dto?.Reason ?? "");
 
-            // TODO: ghi audit log trong bảng AdminActions
-            Console.WriteLine($"[Admin] {(caller?.Email ?? "unknown")} khóa user {targetUser.Email} (trước: {before}) - reason: {dto?.Reason}");
-
-            return Ok(new { success = true, before, after = targetUser.TrangThai });
+                // Reload để lấy trạng thái mới
+                var updated = await _db.NguoiDungs.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+                
+                // Ghi log
+                Console.WriteLine($"[Admin] {caller.Email} khóa user {targetUser.Email} - Lý do: {dto?.Reason}");
+                
+                return Ok(new { success = true, status = updated?.TrangThai });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BanUser] Error: {ex}");
+                return Problem(detail: ex.Message, statusCode: 500);
+            }
         }
 
-        // ===========================
-        // Reports (Báo cáo vi phạm)
-        // ===========================
-
-        // GET /api/admin/reports?page=1&pageSize=20&status=
-        [HttpGet("reports")]
-        public async Task<IActionResult> GetReports([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? status = null)
+        // POST /api/admin/users/{id}/unlock
+        [HttpPost("users/{id:long}/unlock")]
+        public async Task<IActionResult> UnlockUser(long id)
         {
-            page = Math.Max(1, page);
-            pageSize = Math.Clamp(pageSize, 1, 200);
+            // 1️⃣ Lấy thông tin admin đang thực hiện
+            var caller = await GetCallerAsync();
+            if (caller == null) return Forbid("Caller information not found.");
 
-            var q = _db.BaoCaoViPhams.Include(r => r.NguoiBaoCao).Include(r => r.KhungHinh).AsQueryable();
-            if (!string.IsNullOrWhiteSpace(status)) q = q.Where(r => r.TrangThaiXuLy == status);
-
-            var total = await q.CountAsync();
-            var items = await q.OrderByDescending(r => r.NgayTao)
-                .Skip((page - 1) * pageSize).Take(pageSize)
-                .Select(r => new
-                {
-                    r.Id,
-                    r.KhungHinhId,
-                    frameTitle = r.KhungHinh.TieuDe,
-                    r.NguoiBaoCaoId,
-                    reporter = r.NguoiBaoCao == null ? null : new { r.NguoiBaoCao.Id, name = r.NguoiBaoCao.TenHienThi, email = r.NguoiBaoCao.Email },
-                    r.LyDo,
-                    r.MoTaThem,
-                    r.TrangThaiXuLy,
-                    r.NgayTao,
-                    r.NgayCapNhat
-                }).AsNoTracking().ToListAsync();
-
-            return Ok(new { total, page, pageSize, items });
-        }
-
-        // POST /api/admin/reports/{id}/resolve  body: { "action": "dismiss"|"remove"|"warn", "note": "..." }
-        [HttpPost("reports/{id:long}/resolve")]
-        public async Task<IActionResult> ResolveReport(long id, [FromBody] ResolveReportDto dto)
-        {
-            var report = await _db.BaoCaoViPhams.Include(r => r.KhungHinh).FirstOrDefaultAsync(r => r.Id == id);
-            if (report == null) return NotFound();
-
-            // Ví dụ xử lý cơ bản: nếu action == remove -> set frame.TrangThai = "bi_khoa"
-            if (dto.Action == "remove")
+            // 2️⃣ Thực hiện mở khóa
+            try
             {
-                if (report.KhungHinh != null)
-                {
-                    report.KhungHinh.TrangThai = "bi_khoa";
-                    report.KhungHinh.NgayChinhSua = DateTime.UtcNow;
-                }
-                report.TrangThaiXuLy = "da_xu_ly";
-            }
-            else if (dto.Action == "dismiss")
-            {
-                report.TrangThaiXuLy = "da_xu_ly";
-            }
-            else if (dto.Action == "warn")
-            {
-                report.TrangThaiXuLy = "da_xu_ly";
-                // TODO: implement warning mechanism
-            }
-            report.NgayCapNhat = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+                // Gọi stored procedure
+                await _db.Database.ExecuteSqlRawAsync(
+                    "EXEC dbo.sp_UnlockUser @ActorId = {0}, @TargetId = {1}", 
+                    caller.Id, id);
 
-            return Ok(new { success = true, action = dto.Action });
+                // Reload để lấy trạng thái mới
+                var updated = await _db.NguoiDungs.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+                
+                return Ok(new { success = true, status = updated?.TrangThai });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UnlockUser] Error: {ex}");
+                return Problem(detail: ex.Message, statusCode: 500);
+            }
         }
 
         // ===========================
         // Statistics / Dashboard
         // ===========================
 
-        // GET /api/admin/stats
-        // Trả về số lượng tóm tắt để hiển thị ở dashboard
         // GET /api/admin/stats?days=7
         // Trả về số lượng tóm tắt để hiển thị ở dashboard
         [HttpGet("stats")]
@@ -500,12 +497,6 @@ namespace Khunghinh.Api.Controllers
                 .CountAsync(x => x.CheDoHienThi == "cong_khai" && x.TrangThai == "dang_hoat_dong");
             var pausedFrames = await _db.KhungHinhs
                 .CountAsync(x => x.TrangThai != "dang_hoat_dong");
-
-            // ===========================
-            // 🚨 BÁO CÁO
-            // ===========================
-            var reportsOpen = await _db.BaoCaoViPhams
-                .CountAsync(r => r.TrangThaiXuLy != "da_xu_ly");
 
             // ===========================
             // 📈 BIỂU ĐỒ LƯỢT XEM/TẢI (ThongKeNgay)
@@ -587,9 +578,9 @@ namespace Khunghinh.Api.Controllers
                 .Take(5)
                 .Select(x => new { 
                     x.Id, 
-                    tieuDe = x.TieuDe,  // ✅ camelCase
-                    alias = x.Alias,    // ✅ camelCase
-                    ngayDang = x.NgayDang // ✅ camelCase
+                    tieuDe = x.TieuDe,
+                    alias = x.Alias,
+                    ngayDang = x.NgayDang
                 })
                 .AsNoTracking()
                 .ToListAsync();
@@ -609,7 +600,6 @@ namespace Khunghinh.Api.Controllers
                     public_ = publicFrames,
                     paused = pausedFrames
                 },
-                reports = new { open = reportsOpen },
 
                 // ✅ DỮ LIỆU BIỂU ĐỒ (quan trọng nhất)
                 chart = new
@@ -617,7 +607,6 @@ namespace Khunghinh.Api.Controllers
                     period = $"{days} days",
                     totalViews = totalViewsInPeriod,
                     totalDownloads = totalDownloadsInPeriod,
-                    // ✅ Mảng dữ liệu theo ngày để vẽ chart
                     dailyData = dailyStats
                 },
 
@@ -627,27 +616,22 @@ namespace Khunghinh.Api.Controllers
             });
         }
 
-        // POST /api/admin/users/{id}/unlock
-        [HttpPost("users/{id:long}/unlock")]
-        public async Task<IActionResult> UnlockUser(long id)
-        {
-            var targetUser = await _db.NguoiDungs.FindAsync(id);
-            if (targetUser == null) return NotFound();
-
-            var before = targetUser.TrangThai;
-            targetUser.TrangThai = "active"; // hoặc trạng thái mặc định
-            targetUser.NgayCapNhat = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
-
-            return Ok(new { success = true, before, after = targetUser.TrangThai });
-        }
-
         // ===========================
         // DTOs (internal to this controller)
         // ===========================
         public record ChangeStatusDto(string Status);
         public record ChangeRoleDto(string Role);
         public record BanUserDto(string? Reason);
-        public record ResolveReportDto(string Action, string? Note);
-    }
+
+        // ===========================
+        // HELPER METHOD
+        // ===========================
+        private async Task<NguoiDung?> GetCallerAsync()
+        {
+            var email = User.Claims.FirstOrDefault(c => c.Type.Contains("email"))?.Value;
+            return string.IsNullOrEmpty(email) 
+                ? null 
+                : await _db.NguoiDungs.FirstOrDefaultAsync(u => u.Email == email);
+        }
+    } 
 }

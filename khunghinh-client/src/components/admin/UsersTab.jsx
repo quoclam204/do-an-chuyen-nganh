@@ -5,8 +5,8 @@ import {
     Crown, User, Settings, Lock, Unlock, RefreshCw, Star, X
 } from 'lucide-react'
 
-// API Configuration
-const API_BASE = import.meta.env.VITE_API_ORIGIN || 'http://localhost:7090'
+// API Configuration - Sử dụng cách tốt hơn
+const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'http://localhost:7090').replace(/\/$/, '')
 
 // Helper functions
 const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('vi-VN') : n)
@@ -19,10 +19,10 @@ const formatDate = (d) => {
     })
 }
 
-// API helper
+// API helper - Sử dụng BACKEND_ORIGIN
 const apiCall = async (endpoint, options = {}) => {
     try {
-        const response = await fetch(`${API_BASE}/api${endpoint}`, {
+        const response = await fetch(`${BACKEND_ORIGIN}/api${endpoint}`, {
             credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
@@ -320,24 +320,39 @@ function UserDetailModal({ user, isOpen, onClose, onRoleChange, onBanUser, onUnl
                                             )}
                                         </div>
 
-                                        {/* Ban/Unban */}
-                                        <div className="mt-2">
-                                            {user.status === 'bi_khoa' ? (
+                                        {/* Ban/Unban button - CHỈ HIỂN THỊ CHO SUPER ADMIN */}
+                                        {(() => {
+                                            const currentUserData = getCurrentUser()
+                                            const currentUser = users.find(u => u.email === currentUserData?.email)
+                                            const callerIsSuper = currentUser?.isSuper === true || currentUser?.isSuper === 1
+
+                                            // ❌ Admin thường KHÔNG thấy nút khóa
+                                            if (!callerIsSuper) {
+                                                return null // Không hiển thị nút
+                                            }
+
+                                            // ✅ Super Admin thấy nút khóa/mở khóa
+                                            return user.status === 'bi_khoa' ? (
                                                 <button
-                                                    onClick={() => onUnlockUser(user.id)}
-                                                    className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-emerald-700 transition-colors"
+                                                    onClick={() => unlockUser(user.id)}
+                                                    className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
+                                                    title="Mở khóa tài khoản"
                                                 >
-                                                    <Unlock size={16} /> Mở khóa tài khoản
+                                                    <Unlock size={14} /> Mở khóa
                                                 </button>
                                             ) : (
                                                 <button
-                                                    onClick={() => onBanUser(user.id, 'Vi phạm quy định')}
-                                                    className="w-full flex items-center justify-center gap-2 bg-rose-600 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-rose-700 transition-colors"
+                                                    onClick={() => {
+                                                        setSelectedUser(user)
+                                                        setShowBanModal(true)
+                                                    }}
+                                                    className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 transition-colors"
+                                                    title="Khóa tài khoản"
                                                 >
-                                                    <Lock size={16} /> Khóa tài khoản
+                                                    <Ban size={14} /> Khóa
                                                 </button>
-                                            )}
-                                        </div>
+                                            )
+                                        })()}
                                     </div>
                                 </div>
                             </div>
@@ -665,63 +680,299 @@ export default function UsersTab() {
         })
     }, [users, roleFilter])
 
-    // User actions
+    // User actions - CẬP NHẬT LOGIC PHÂN QUYỀN
     const changeUserRole = async (userId, newRole) => {
         try {
+            // Validate trước khi gọi API
+            const targetUser = users.find(u => u.id === userId)
+            if (!targetUser) {
+                alert('❌ Không tìm thấy người dùng')
+                return
+            }
+
+            // ✅ Lấy thông tin user hiện tại từ localStorage
+            const currentUserData = getCurrentUser()
+            if (!currentUserData) {
+                alert('❌ Không xác định được người dùng hiện tại.\n\nVui lòng đăng nhập lại.')
+                return
+            }
+
+            // ✅ Tìm currentUser trong danh sách users (để có đầy đủ thông tin)
+            const currentUser = users.find(u => u.email === currentUserData.email)
+            if (!currentUser) {
+                alert('❌ Không tìm thấy thông tin người dùng hiện tại trong hệ thống.')
+                return
+            }
+
+            // ✅ Chuẩn hóa quyền
+            const callerIsSuper = currentUser.isSuper === true || currentUser.isSuper === 1 || currentUser.role === 'superadmin'
+            const targetIsSuper = targetUser.isSuper === true || targetUser.isSuper === 1 || targetUser.role === 'superadmin'
+
+            console.log('🔍 Role Check:', {
+                currentUser: currentUser.email,
+                callerRole: currentUser.role,
+                callerIsSuper,
+                targetUser: targetUser.email,
+                targetRole: targetUser.role,
+                targetIsSuper,
+                newRole
+            })
+
+            // ===========================
+            // FRONTEND VALIDATION (giống backend)
+            // ===========================
+
+            // 1. Không tự thay đổi quyền
+            if (currentUser.id === userId) {
+                alert('🚫 Không được tự thay đổi quyền của chính bạn qua API.')
+                return
+            }
+
+            // 2. Chỉ SuperAdmin động SuperAdmin
+            if (targetIsSuper && !callerIsSuper) {
+                alert('🚫 Chỉ Super Admin mới có quyền thay đổi Super Admin khác.\n\n' +
+                    'Bạn cần quyền Super Admin để thực hiện hành động này.')
+                return
+            }
+
+            // 3. Admin thường chỉ động user
+            if (currentUser.role === 'admin' && !callerIsSuper && targetUser.role !== 'user') {
+                alert('🚫 Admin chỉ có thể thao tác trên người dùng bình thường.\n\n' +
+                    'Chỉ Super Admin mới có quyền thay đổi quyền Admin.')
+                return
+            }
+
+            // 4. Chỉ Super Admin mới thăng admin
+            if (newRole === 'admin' && targetUser.role === 'user' && !callerIsSuper) {
+                alert('🚫 Chỉ Super Admin mới có quyền thăng admin.')
+                return
+            }
+
+            // 5. Chỉ Super Admin mới hạ admin
+            if (newRole === 'user' && targetUser.role === 'admin' && !callerIsSuper) {
+                alert('🚫 Chỉ Super Admin mới có quyền hạ admin.')
+                return
+            }
+
+            // 6. Chỉ Super Admin mới thăng/hạ Super Admin
+            if ((newRole === 'superadmin' || targetIsSuper) && !callerIsSuper) {
+                alert('🚫 Chỉ Super Admin mới có quyền thăng/hạ Super Admin.')
+                return
+            }
+
+            // ===========================
+            // CONFIRM ACTION
+            // ===========================
+            const confirmMsg = getConfirmMessage(targetUser, newRole)
+            if (!confirm(confirmMsg)) return
+
+            // ===========================
+            // GỌI API
+            // ===========================
             const response = await apiCall(`/admin/users/${userId}/role`, {
                 method: 'POST',
                 body: JSON.stringify({ role: newRole })
             })
 
-            // Reload users after successful change
-            await loadUsers()
+            // ===========================
+            // XỬ LÝ KẾT QUẢ
+            // ===========================
+            await loadUsers() // Reload danh sách
             setShowDetailModal(false)
 
-            // Show success message with details from backend
             if (response.success && response.before && response.after) {
                 const { before, after } = response
-                const beforeText = before.isSuper ? 'Super Admin' :
-                    before.role === 'admin' ? 'Admin' : 'User'
-                const afterText = after.isSuper ? 'Super Admin' :
-                    after.role === 'admin' ? 'Admin' : 'User'
+                const beforeText = getRoleText(before.role, before.isSuper)
+                const afterText = getRoleText(after.role, after.isSuper)
 
                 alert(`✅ Đã cập nhật vai trò thành công!\n\n` +
+                    `Người dùng: ${targetUser.name}\n` +
                     `Trước: ${beforeText}\n` +
-                    `Sau: ${afterText}`)
+                    `Sau: ${afterText}\n\n` +
+                    `Thay đổi đã được ghi nhận vào hệ thống.`)
             } else {
                 alert('✅ Đã cập nhật vai trò thành công!')
             }
         } catch (error) {
-            console.error('Failed to change role:', error)
-
-            // Enhanced error handling based on backend responses
-            let errorMessage = 'Có lỗi xảy ra khi thay đổi vai trò'
-
-            if (error.message.includes('500')) {
-                errorMessage = '❌ Lỗi server nội bộ.\n\n' +
-                    'Có thể do:\n' +
-                    '• Trigger database từ chối thay đổi\n' +
-                    '• Ràng buộc về số lượng Super Admin\n' +
-                    '• Stored procedure thất bại\n\n' +
-                    'Vui lòng kiểm tra console server để biết chi tiết.'
-            } else if (error.message.includes('403') || error.message.includes('Forbid')) {
-                errorMessage = '🚫 Bạn không có quyền thực hiện hành động này.\n\n' +
-                    'Chỉ Super Admin mới có thể:\n' +
-                    '• Thăng/hạ quyền Admin\n' +
-                    '• Quản lý Super Admin khác'
-            } else if (error.message.includes('404')) {
-                errorMessage = '❓ Không tìm thấy người dùng.\n\nNgười dùng có thể đã bị xóa.'
-            } else if (error.message.includes('400') || error.message.includes('BadRequest')) {
-                errorMessage = '⚠️ Dữ liệu không hợp lệ.\n\n' +
-                    'Không thể tự thay đổi quyền của chính mình qua API.'
-            }
-
-            alert(errorMessage + '\n\nChi tiết kỹ thuật: ' + error.message)
+            console.error('❌ Failed to change role:', error)
+            handleRoleChangeError(error)
         }
     }
 
+    // Helper: Get current user email from localStorage
+    const getCurrentUserEmail = () => {
+        try {
+            const me = JSON.parse(localStorage.getItem('kh_me') || 'null')
+            return me?.email || null
+        } catch {
+            return null
+        }
+    }
+
+    // Helper: Get current user full info
+    const getCurrentUser = () => {
+        try {
+            const me = JSON.parse(localStorage.getItem('kh_me') || 'null')
+            return me || null
+        } catch {
+            return null
+        }
+    }
+
+    // Helper: Get role text for display
+    const getRoleText = (role, isSuper) => {
+        if (isSuper === true || isSuper === 1) return '⭐ Super Admin'
+        if (role === 'admin') return '👑 Admin'
+        return '👤 User'
+    }
+
+    // Helper: Get confirmation message
+    const getConfirmMessage = (user, newRole) => {
+        const current = getRoleText(user.role, user.isSuper)
+        const target = getRoleText(newRole, newRole === 'superadmin' ? 1 : 0)
+
+        let warning = ''
+        if (newRole === 'superadmin') {
+            warning = '\n\n⚠️ CHÚ Ý: Super Admin có toàn quyền trong hệ thống!\n' +
+                'Hành động này cần được thận trọng và có thẩm quyền phê duyệt.'
+        } else if (user.isSuper && newRole !== 'superadmin') {
+            warning = '\n\n⚠️ Bạn đang hạ quyền một Super Admin.\n' +
+                'Điều này sẽ ảnh hưởng đến quyền quản trị của họ.'
+        }
+
+        return `🔄 Xác nhận thay đổi vai trò\n\n` +
+            `Người dùng: ${user.name}\n` +
+            `Email: ${user.email}\n\n` +
+            `Vai trò hiện tại: ${current}\n` +
+            `Vai trò mới: ${target}${warning}\n\n` +
+            `Bạn có chắc chắn muốn thực hiện thay đổi này?`
+    }
+
+    // Helper: Handle role change errors
+    const handleRoleChangeError = (error) => {
+        let errorMessage = 'Có lỗi xảy ra khi thay đổi vai trò'
+
+        const errorStr = error.message || ''
+
+        if (errorStr.includes('500') || errorStr.includes('Internal Server Error')) {
+            errorMessage = '❌ Lỗi server nội bộ.\n\n' +
+                'Có thể do:\n' +
+                '• Stored procedure từ chối thay đổi\n' +
+                '• Ràng buộc về phân quyền trong database\n' +
+                '• Trigger database từ chối thay đổi\n\n' +
+                'Vui lòng liên hệ quản trị viên hệ thống.'
+        } else if (errorStr.includes('403') || errorStr.includes('Forbid')) {
+            errorMessage = '🚫 Bạn không có quyền thực hiện hành động này.\n\n' +
+                'Chỉ Super Admin mới có thể:\n' +
+                '• Thăng/hạ quyền Admin ↔ User\n' +
+                '• Quản lý Super Admin khác\n' +
+                '• Thay đổi cấu trúc phân quyền\n\n' +
+                'Vui lòng liên hệ Super Admin nếu bạn cần hỗ trợ.'
+        } else if (errorStr.includes('404') || errorStr.includes('Not Found')) {
+            errorMessage = '❓ Không tìm thấy người dùng.\n\n' +
+                'Người dùng có thể đã bị xóa hoặc không tồn tại trong hệ thống.'
+        } else if (errorStr.includes('400') || errorStr.includes('BadRequest')) {
+            errorMessage = '⚠️ Yêu cầu không hợp lệ.\n\n' +
+                'Lỗi có thể do:\n' +
+                '• Không được tự thay đổi quyền của chính mình\n' +
+                '• Vai trò mới không hợp lệ (phải là user/admin/superadmin)\n' +
+                '• Dữ liệu gửi đi không đúng định dạng'
+        } else if (errorStr.includes('Unauthorized') || errorStr.includes('401')) {
+            errorMessage = '🔐 Phiên đăng nhập đã hết hạn.\n\n' +
+                'Vui lòng đăng nhập lại để tiếp tục.'
+        }
+
+        alert(errorMessage + '\n\n💡 Chi tiết kỹ thuật:\n' + errorStr)
+    }
+
+    // Ban user - CẬP NHẬT
     const banUser = async (userId, reason) => {
         try {
+            const targetUser = users.find(u => u.id === userId)
+            if (!targetUser) {
+                alert('❌ Không tìm thấy người dùng')
+                return
+            }
+
+            // ✅ Lấy thông tin user hiện tại
+            const currentUserData = getCurrentUser()
+            if (!currentUserData) {
+                alert('❌ Không xác định được người dùng hiện tại.\n\nVui lòng đăng nhập lại.')
+                return
+            }
+
+            const currentUser = users.find(u => u.email === currentUserData.email)
+            if (!currentUser) {
+                alert('❌ Không tìm thấy thông tin người dùng hiện tại trong hệ thống.')
+                return
+            }
+
+            // ===========================
+            // CHECK QUYỀN KHÓA TÀI KHOẢN
+            // ===========================
+            const callerIsSuper = currentUser.isSuper === true || currentUser.isSuper === 1 || currentUser.role === 'superadmin'
+            const targetIsSuper = targetUser.isSuper === true || targetUser.isSuper === 1 || targetUser.role === 'superadmin'
+
+            // 🚫 Rule 1: Admin thường KHÔNG được khóa ai
+            if (currentUser.role === 'admin' && !callerIsSuper) {
+                alert('🚫 KHÔNG CÓ QUYỀN KHÓA TÀI KHOẢN\n\n' +
+                    'Chỉ Super Admin mới có quyền khóa tài khoản.\n\n' +
+                    '💡 Admin thường không có quyền này để đảm bảo an ninh hệ thống.\n' +
+                    'Vui lòng liên hệ Super Admin nếu cần hỗ trợ.')
+                return
+            }
+
+            // 🚫 Rule 2: Không tự khóa chính mình
+            if (currentUser.id === userId) {
+                alert('🚫 KHÔNG THỂ TỰ KHÓA CHÍNH MÌNH\n\n' +
+                    'Bạn không thể tự khóa tài khoản của chính bạn qua API.\n\n' +
+                    '💡 Nếu cần vô hiệu hóa tài khoản của bạn, vui lòng:\n' +
+                    '• Liên hệ Super Admin khác\n' +
+                    '• Hoặc sử dụng chức năng đăng xuất')
+                return
+            }
+
+            // 🚫 Rule 3: Super Admin khóa Super Admin khác (cần xác nhận)
+            if (targetIsSuper && !callerIsSuper) {
+                alert('🚫 KHÔNG THỂ KHÓA SUPER ADMIN\n\n' +
+                    'Chỉ Super Admin mới có quyền khóa Super Admin khác.\n\n' +
+                    '💡 Hành động này yêu cầu quyền cao nhất để đảm bảo an ninh.')
+                return
+            }
+
+            // 🚫 Rule 4: Khóa Admin (chỉ Super Admin)
+            if (targetUser.role === 'admin' && !callerIsSuper) {
+                alert('🚫 KHÔNG THỂ KHÓA ADMIN\n\n' +
+                    'Chỉ Super Admin mới có quyền khóa tài khoản Admin.\n\n' +
+                    '💡 Admin thường không thể khóa Admin khác để tránh xung đột quyền hạn.')
+                return
+            }
+
+            // ✅ Confirm trước khi khóa
+            let confirmMsg = '🔒 XÁC NHẬN KHÓA TÀI KHOẢN\n\n'
+            confirmMsg += `Người dùng: ${targetUser.name}\n`
+            confirmMsg += `Email: ${targetUser.email}\n`
+            confirmMsg += `Vai trò: ${getRoleText(targetUser.role, targetUser.isSuper)}\n`
+            confirmMsg += `Lý do: ${reason || 'Không có'}\n\n`
+
+            if (targetIsSuper) {
+                confirmMsg += '⚠️ CHÚ Ý: Bạn đang khóa một Super Admin!\n'
+                confirmMsg += 'Hành động này sẽ:\n'
+                confirmMsg += '• Vô hiệu hóa toàn bộ quyền của họ\n'
+                confirmMsg += '• Ngăn họ đăng nhập vào hệ thống\n'
+                confirmMsg += '• Có thể ảnh hưởng đến hoạt động quản trị\n\n'
+            } else if (targetUser.role === 'admin') {
+                confirmMsg += '⚠️ CHÚ Ý: Bạn đang khóa một Admin!\n'
+                confirmMsg += 'Điều này sẽ ảnh hưởng đến khả năng quản lý của họ.\n\n'
+            }
+
+            confirmMsg += 'Bạn có chắc chắn muốn tiếp tục?'
+
+            if (!confirm(confirmMsg)) return
+
+            // ===========================
+            // GỌI API KHÓA TÀI KHOẢN
+            // ===========================
             const response = await apiCall(`/admin/users/${userId}/ban`, {
                 method: 'POST',
                 body: JSON.stringify({ reason: reason || 'Vi phạm quy định' })
@@ -730,40 +981,57 @@ export default function UsersTab() {
             await loadUsers()
 
             if (response.success) {
-                alert('✅ Đã khóa tài khoản thành công!')
+                alert(`✅ ĐÃ KHÓA TÀI KHOẢN THÀNH CÔNG!\n\n` +
+                    `Người dùng: ${targetUser.name}\n` +
+                    `Email: ${targetUser.email}\n` +
+                    `Lý do: ${reason}\n` +
+                    `Trạng thái mới: ${response.status || 'bi_khoa'}\n\n` +
+                    `🔔 Người dùng này sẽ không thể đăng nhập cho đến khi được mở khóa.`)
             }
         } catch (error) {
-            console.error('Failed to ban user:', error)
-
-            let errorMessage = 'Có lỗi xảy ra khi khóa tài khoản'
-
-            if (error.message.includes('403') || error.message.includes('Forbid')) {
-                errorMessage = '🚫 Bạn không có quyền khóa tài khoản này.\n\n' +
-                    'Chỉ Super Admin mới có thể khóa Admin hoặc Super Admin khác.'
-            } else if (error.message.includes('400') || error.message.includes('BadRequest')) {
-                errorMessage = '⚠️ Không thể tự khóa tài khoản của chính mình.'
-            } else if (error.message.includes('404')) {
-                errorMessage = '❓ Không tìm thấy người dùng.'
-            }
-
-            alert(errorMessage + '\n\nChi tiết: ' + error.message)
+            console.error('❌ Failed to ban user:', error)
+            handleBanError(error)
         }
     }
 
-    // Enhanced unlock functionality
+    // Helper: Handle ban errors
+    const handleBanError = (error) => {
+        const errorStr = error.message || ''
+        let errorMessage = 'Có lỗi xảy ra khi khóa tài khoản'
+
+        if (errorStr.includes('403') || errorStr.includes('Forbid')) {
+            errorMessage = '🚫 Bạn không có quyền khóa tài khoản này.\n\n' +
+                'Chỉ Super Admin mới có thể khóa Admin hoặc Super Admin khác.'
+        } else if (errorStr.includes('400') || errorStr.includes('BadRequest')) {
+            errorMessage = '⚠️ Không thể tự khóa tài khoản của chính mình qua API.'
+        } else if (errorStr.includes('404')) {
+            errorMessage = '❓ Không tìm thấy người dùng.'
+        } else if (errorStr.includes('500')) {
+            errorMessage = '❌ Lỗi server khi thực thi stored procedure sp_LockUser.\n\n' +
+                'Vui lòng kiểm tra log server.'
+        }
+
+        alert(errorMessage + '\n\n💡 Chi tiết: ' + errorStr)
+    }
+
+    // Unlock user - CẬP NHẬT
     const unlockUser = async (userId) => {
         try {
-            // Tạm thời sử dụng endpoint ban với action "unlock"
-            const response = await apiCall(`/admin/users/${userId}/ban`, {
-                method: 'POST',
-                body: JSON.stringify({ reason: 'Mở khóa bởi admin', action: 'unlock' })
+            const response = await apiCall(`/admin/users/${userId}/unlock`, {
+                method: 'POST'
             })
 
             await loadUsers()
-            alert('✅ Đã mở khóa tài khoản thành công!')
+
+            if (response.success) {
+                const user = users.find(u => u.id === userId)
+                alert(`✅ Đã mở khóa tài khoản thành công!\n\n` +
+                    `Người dùng: ${user?.name || 'N/A'}\n` +
+                    `Trạng thái: ${response.status || 'hoat_dong'}`)
+            }
         } catch (error) {
             console.error('Failed to unlock user:', error)
-            alert('❌ Có lỗi xảy ra khi mở khóa: ' + error.message)
+            alert('❌ Có lỗi xảy ra khi mở khóa:\n\n' + error.message)
         }
     }
 
@@ -921,8 +1189,8 @@ export default function UsersTab() {
                         >
                             <option value="all">Tất cả vai trò</option>
                             <option value="superadmin">⭐ Super Admin</option>
-                            <option value="admin">👑 Admin</option>
-                            <option value="user">👤 User</option>
+                            <option value="admin">👑 Quản trị viên</option>
+                            <option value="user">👤 Người dùng</option>
                         </select>
                         <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                     </div>
@@ -1056,26 +1324,39 @@ export default function UsersTab() {
                                                     </button>
                                                 )}
 
-                                                {user.status === 'bi_khoa' ? (
-                                                    <button
-                                                        onClick={() => unlockUser(user.id)}
-                                                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
-                                                        title="Mở khóa tài khoản"
-                                                    >
-                                                        <Unlock size={14} /> Mở khóa
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedUser(user)
-                                                            setShowBanModal(true)
-                                                        }}
-                                                        className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 transition-colors"
-                                                        title="Khóa tài khoản"
-                                                    >
-                                                        <Ban size={14} /> Khóa
-                                                    </button>
-                                                )}
+                                                {/* Ban/Unban button - CHỈ HIỂN THỊ CHO SUPER ADMIN */}
+                                                {(() => {
+                                                    const currentUserData = getCurrentUser()
+                                                    const currentUser = users.find(u => u.email === currentUserData?.email)
+                                                    const callerIsSuper = currentUser?.isSuper === true || currentUser?.isSuper === 1
+
+                                                    // ❌ Admin thường KHÔNG thấy nút khóa
+                                                    if (!callerIsSuper) {
+                                                        return null // Không hiển thị nút
+                                                    }
+
+                                                    // ✅ Super Admin thấy nút khóa/mở khóa
+                                                    return user.status === 'bi_khoa' ? (
+                                                        <button
+                                                            onClick={() => unlockUser(user.id)}
+                                                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
+                                                            title="Mở khóa tài khoản"
+                                                        >
+                                                            <Unlock size={14} /> Mở khóa
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedUser(user)
+                                                                setShowBanModal(true)
+                                                            }}
+                                                            className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 transition-colors"
+                                                            title="Khóa tài khoản"
+                                                        >
+                                                            <Ban size={14} /> Khóa
+                                                        </button>
+                                                    )
+                                                })()}
                                             </div>
                                         </td>
                                     </tr>

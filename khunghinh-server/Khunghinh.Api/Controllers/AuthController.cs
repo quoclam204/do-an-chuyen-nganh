@@ -52,11 +52,18 @@ window.close();
         public IActionResult Me()
         {
             var email = User.Claims.FirstOrDefault(c => c.Type.Contains("email"))?.Value;
-
-            if (string.IsNullOrEmpty(email))
-                return Unauthorized("Email not found in claims");
-
             var user = _db.NguoiDungs.FirstOrDefault(x => x.Email == email);
+
+            // ✅ Thêm kiểm tra trạng thái
+            if (user?.TrangThai == "bi_khoa")
+            {
+                HttpContext.SignOutAsync();
+                return Unauthorized(new
+                {
+                    error = "Tài khoản đã bị khóa",
+                    reason = "Liên hệ admin để biết thêm chi tiết"
+                });
+            }
 
             if (user == null)
             {

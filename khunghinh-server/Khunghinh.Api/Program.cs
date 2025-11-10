@@ -126,6 +126,31 @@ app.MapControllers();
 // ===== Root ping để test nhanh =====
 app.MapGet("/", () => Results.Ok("Khunghinh API is running"));
 
+// ===== Kiểm tra trạng thái tài khoản (chưa rõ bỏ vô đâu) =====
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true)
+    {
+        var email = context.User.FindFirst(c => c.Type.Contains("email"))?.Value;
+        if (!string.IsNullOrEmpty(email))
+        {
+            var db = context.RequestServices.GetRequiredService<KhunghinhContext>();
+            var user = await db.NguoiDungs.FirstOrDefaultAsync(u => u.Email == email);
+            
+            if (user?.TrangThai == "bi_khoa")
+            {
+                await context.SignOutAsync();
+                context.Response.StatusCode = 401;
+                await context.Response.WriteAsJsonAsync(new { 
+                    error = "Tài khoản đã bị khóa" 
+                });
+                return;
+            }
+        }
+    }
+    await next();
+});
+
 app.Run();
 
 // ===== record demo (nếu còn dùng /weatherforecast) =====

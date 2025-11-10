@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ImageIcon, Users, Plus, FileText, Activity, TrendingUp, Clock } from 'lucide-react'
+import { ImageIcon, Users, Plus, Activity, TrendingUp, Clock } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import {
     Chart as ChartJS,
@@ -358,12 +358,12 @@ function RecentActivity({ frames }) {
                         <span className="size-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                             <div className="text-slate-700">
-                                {/* ✅ Sửa từ frame.TieuDe -> frame.tieuDe */}
+                                {/* ✅ Sửa từ TieuDe -> tieuDe (camelCase) */}
                                 Khung <b className="text-slate-900">{frame.tieuDe}</b> được tạo mới
                             </div>
                             <div className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
                                 <Clock size={12} />
-                                {/* ✅ Sửa từ frame.NgayDang -> frame.ngayDang */}
+                                {/* ✅ Sửa từ NgayDang -> ngayDang (camelCase) */}
                                 {formatTimeAgo(frame.ngayDang)}
                             </div>
                         </div>
@@ -442,6 +442,7 @@ export default function DashboardTab() {
         )
     }
 
+    // ✅ Chỉ còn 3 stat cards (đã bỏ "Báo cáo chờ xử lý")
     const statCards = [
         {
             title: 'Tổng khung hình',
@@ -466,21 +467,13 @@ export default function DashboardTab() {
             icon: Plus,
             color: 'from-amber-500 to-orange-500',
             sparkline: [2, 3, 5, 4, 6, 8, 7, 9, 10, dashboardData?.users?.newLast7Days || 0]
-        },
-        {
-            title: 'Báo cáo chờ xử lý',
-            value: dashboardData?.reports?.open || 0,
-            diff: 0,
-            icon: FileText,
-            color: 'from-rose-500 to-pink-500',
-            sparkline: [5, 3, 4, 2, 3, 5, 4, 3, 2, dashboardData?.reports?.open || 0]
-        },
+        }
     ]
 
     return (
         <div className="space-y-8">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* Stats Cards - ✅ Grid 3 cột thay vì 4 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {statCards.map((s, i) => {
                     const Icon = s.icon
                     return (

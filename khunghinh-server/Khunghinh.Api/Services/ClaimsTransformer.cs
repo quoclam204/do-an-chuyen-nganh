@@ -31,7 +31,15 @@ namespace Khunghinh.Api.Services
             if (principal.Claims.Any(c => c.Type == ClaimTypes.Role)) return principal;
 
             var identity = new ClaimsIdentity();
+            
+            // ✅ Thêm Role claim
             identity.AddClaim(new Claim(ClaimTypes.Role, string.IsNullOrEmpty(user.VaiTro) ? "user" : user.VaiTro));
+            
+            // ✅ Thêm IsSuperAdmin claim để dễ kiểm tra
+            identity.AddClaim(new Claim("IsSuperAdmin", user.IsSuperAdmin.ToString()));
+            
+            // ✅ Thêm UserId claim
+            identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()));
 
             principal.AddIdentity(identity);
             return principal;

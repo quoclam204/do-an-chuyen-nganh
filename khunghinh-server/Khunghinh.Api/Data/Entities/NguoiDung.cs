@@ -21,7 +21,7 @@ public partial class NguoiDung
 
     public DateTime? NgayCapNhat { get; set; }
 
-    // ✅ cột mới
+    // ✅ Đã có từ scaffold
     public bool IsSuperAdmin { get; set; }
 
     public virtual ICollection<BaoCaoViPham> BaoCaoViPhams { get; set; } = new List<BaoCaoViPham>();
