@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Upload, X, Image, Info } from 'lucide-react'
+import useRequireAuth from '../hooks/useRequireAuth'
 
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 const URL_PREFIX = 'https://trendyframe.me/'
@@ -8,6 +9,7 @@ const URL_PREFIX = 'https://trendyframe.me/'
 export default function CreateFrame() {
     const navigate = useNavigate()
     const fileInputRef = useRef(null)
+    const { user, loading } = useRequireAuth()
 
     const [formData, setFormData] = useState({
         title: '',
@@ -15,7 +17,7 @@ export default function CreateFrame() {
     })
     const [selectedFile, setSelectedFile] = useState(null)
     const [preview, setPreview] = useState(null)
-    const [loading, setLoading] = useState(false)
+    const [loadingSubmit, setLoading] = useState(false)
     const [errors, setErrors] = useState({})
     const [success, setSuccess] = useState(null) // ✅ trạng thái thông báo
 
@@ -179,6 +181,16 @@ export default function CreateFrame() {
     }
 
     const urlTail = (formData.url || '').replace(URL_PREFIX, '')
+
+    if (loading) {
+        return (
+            <div className="min-h-screen grid place-items-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            </div>
+        )
+    }
+
+    if (!user) return null
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white py-12">
@@ -388,10 +400,10 @@ export default function CreateFrame() {
                             {/* Submit */}
                             <button
                                 type="submit"
-                                disabled={loading}
+                                disabled={loadingSubmit}
                                 className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold px-6 py-4 rounded-xl shadow-blue-600/20 shadow-md transition"
                             >
-                                {loading ? (
+                                {loadingSubmit ? (
                                     <>
                                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                                         Đang tạo khung…

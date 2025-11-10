@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Loader2, Search, ChevronDown, Trash2, Pencil, Eye } from 'lucide-react'
+import useRequireAuth from '../hooks/useRequireAuth'
 
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 
@@ -57,9 +58,9 @@ function RowSkeleton() {
 
 export default function MyFrames() {
     const navigate = useNavigate()
+    const { user, loading } = useRequireAuth()
 
     const [frames, setFrames] = useState([])
-    const [loading, setLoading] = useState(true)
     const [me, setMe] = useState(null)
     const [query, setQuery] = useState('')
     const [status, setStatus] = useState('all')            // all | active | inactive | pending
@@ -117,7 +118,6 @@ export default function MyFrames() {
 
     async function fetchMyFrames() {
         try {
-            setLoading(true)
             // ✅ ĐÚNG ROUTE + DÙNG COOKIE
             const res = await fetch(`${BACKEND_ORIGIN}/api/frames/my`, {
                 credentials: 'include'
@@ -127,7 +127,6 @@ export default function MyFrames() {
                 // Chưa đăng nhập → đưa người dùng tới trang đăng nhập hoặc thông báo
                 // navigate('/login') // nếu bạn có trang login riêng
                 setFrames([])
-                setLoading(false)
                 return
             }
 
@@ -151,8 +150,6 @@ export default function MyFrames() {
         } catch (e) {
             console.error('fetchMyFrames error:', e)
             setFrames([])
-        } finally {
-            setLoading(false)
         }
     }
 
@@ -218,6 +215,16 @@ export default function MyFrames() {
         if (key === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
         else { setSortKey(key); setSortDir('desc') }
     }
+
+    if (loading) {
+        return (
+            <div className="min-h-screen grid place-items-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            </div>
+        )
+    }
+
+    if (!user) return null
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
