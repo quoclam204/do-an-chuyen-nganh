@@ -114,11 +114,24 @@ function RoleBadge({ role, isSuper }) {
     }
 }
 
-// User Detail Modal
-function UserDetailModal({ user, isOpen, onClose, onRoleChange, onBanUser, onUnlockUser }) {
+// User Detail Modal - ✅ CẬP NHẬT PROPS
+function UserDetailModal({
+    user,
+    isOpen,
+    onClose,
+    onRoleChange,
+    onBanUser,      // Hàm để mở modal ban
+    onUnlockUser,   // Hàm unlock trực tiếp
+    users,          // ✅ THÊM: Danh sách users để check quyền
+    currentUserEmail // ✅ THÊM: Email user hiện tại
+}) {
     if (!isOpen || !user) return null
 
     const isSuper = user.isSuper || user.role === 'superadmin'
+
+    // ✅ Tính callerIsSuper trong modal
+    const currentUser = users?.find(u => u.email === currentUserEmail)
+    const callerIsSuper = currentUser?.isSuper === true || currentUser?.isSuper === 1
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -126,7 +139,7 @@ function UserDetailModal({ user, isOpen, onClose, onRoleChange, onBanUser, onUnl
                 <div className="fixed inset-0 bg-black/25 backdrop-blur-sm" onClick={onClose} />
 
                 <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-                    {/* Header */}
+                    {/* Header - giữ nguyên */}
                     <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
                         <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-xl bg-blue-100 grid place-items-center relative">
@@ -163,7 +176,7 @@ function UserDetailModal({ user, isOpen, onClose, onRoleChange, onBanUser, onUnl
 
                     <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
                         <div className="grid lg:grid-cols-2 gap-8">
-                            {/* User Avatar */}
+                            {/* User Avatar - giữ nguyên */}
                             <div className="space-y-6">
                                 <div>
                                     <h4 className="font-semibold mb-3 text-gray-900">Ảnh đại diện</h4>
@@ -196,7 +209,7 @@ function UserDetailModal({ user, isOpen, onClose, onRoleChange, onBanUser, onUnl
 
                             {/* User Details */}
                             <div className="space-y-6">
-                                {/* Basic Info */}
+                                {/* Basic Info - giữ nguyên */}
                                 <div className="bg-slate-50 rounded-2xl p-4">
                                     <h4 className="font-semibold mb-4 text-gray-900">Thông tin cơ bản</h4>
                                     <div className="space-y-3 text-sm">
@@ -232,7 +245,7 @@ function UserDetailModal({ user, isOpen, onClose, onRoleChange, onBanUser, onUnl
                                     </div>
                                 </div>
 
-                                {/* Timestamps */}
+                                {/* Timestamps - giữ nguyên */}
                                 <div className="bg-slate-50 rounded-2xl p-4">
                                     <h4 className="font-semibold mb-3 text-gray-900">Thời gian</h4>
                                     <div className="space-y-2 text-sm">
@@ -253,7 +266,7 @@ function UserDetailModal({ user, isOpen, onClose, onRoleChange, onBanUser, onUnl
                                     </div>
                                 </div>
 
-                                {/* Super Admin Warning */}
+                                {/* Super Admin Warning - giữ nguyên */}
                                 {isSuper && (
                                     <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-4 border border-yellow-200">
                                         <div className="flex items-center gap-3 mb-2">
@@ -266,22 +279,28 @@ function UserDetailModal({ user, isOpen, onClose, onRoleChange, onBanUser, onUnl
                                     </div>
                                 )}
 
-                                {/* Quick Actions */}
+                                {/* Quick Actions - ✅ SỬA LẠI PHẦN NÀY */}
                                 <div className="pt-4 border-t">
                                     <h4 className="font-semibold mb-3 text-gray-900">Hành động nhanh</h4>
                                     <div className="grid gap-2">
-                                        {/* Role Change */}
+                                        {/* Role Change buttons - giữ nguyên */}
                                         <div className="grid grid-cols-2 gap-2">
                                             {isSuper ? (
                                                 <>
                                                     <button
-                                                        onClick={() => onRoleChange(user.id, 'admin')}
+                                                        onClick={() => {
+                                                            onRoleChange(user.id, 'admin')
+                                                            onClose()
+                                                        }}
                                                         className="flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-purple-700 transition-colors"
                                                     >
                                                         <Crown size={16} /> Hạ xuống Admin
                                                     </button>
                                                     <button
-                                                        onClick={() => onRoleChange(user.id, 'user')}
+                                                        onClick={() => {
+                                                            onRoleChange(user.id, 'user')
+                                                            onClose()
+                                                        }}
                                                         className="flex items-center justify-center gap-2 bg-slate-600 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-slate-700 transition-colors"
                                                     >
                                                         <User size={16} /> Hạ xuống User
@@ -290,13 +309,19 @@ function UserDetailModal({ user, isOpen, onClose, onRoleChange, onBanUser, onUnl
                                             ) : user.role === 'admin' ? (
                                                 <>
                                                     <button
-                                                        onClick={() => onRoleChange(user.id, 'superadmin')}
+                                                        onClick={() => {
+                                                            onRoleChange(user.id, 'superadmin')
+                                                            onClose()
+                                                        }}
                                                         className="flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:from-yellow-600 hover:to-orange-600 transition-colors"
                                                     >
                                                         <Star size={16} /> Thăng Super Admin
                                                     </button>
                                                     <button
-                                                        onClick={() => onRoleChange(user.id, 'user')}
+                                                        onClick={() => {
+                                                            onRoleChange(user.id, 'user')
+                                                            onClose()
+                                                        }}
                                                         className="flex items-center justify-center gap-2 bg-slate-600 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-slate-700 transition-colors"
                                                     >
                                                         <User size={16} /> Hạ xuống User
@@ -305,13 +330,19 @@ function UserDetailModal({ user, isOpen, onClose, onRoleChange, onBanUser, onUnl
                                             ) : (
                                                 <>
                                                     <button
-                                                        onClick={() => onRoleChange(user.id, 'admin')}
+                                                        onClick={() => {
+                                                            onRoleChange(user.id, 'admin')
+                                                            onClose()
+                                                        }}
                                                         className="flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-purple-700 transition-colors"
                                                     >
                                                         <Crown size={16} /> Thăng Admin
                                                     </button>
                                                     <button
-                                                        onClick={() => onRoleChange(user.id, 'superadmin')}
+                                                        onClick={() => {
+                                                            onRoleChange(user.id, 'superadmin')
+                                                            onClose()
+                                                        }}
                                                         className="flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:from-yellow-600 hover:to-orange-600 transition-colors"
                                                     >
                                                         <Star size={16} /> Thăng Super Admin
@@ -320,39 +351,30 @@ function UserDetailModal({ user, isOpen, onClose, onRoleChange, onBanUser, onUnl
                                             )}
                                         </div>
 
-                                        {/* Ban/Unban button - CHỈ HIỂN THỊ CHO SUPER ADMIN */}
-                                        {(() => {
-                                            const currentUserData = getCurrentUser()
-                                            const currentUser = users.find(u => u.email === currentUserData?.email)
-                                            const callerIsSuper = currentUser?.isSuper === true || currentUser?.isSuper === 1
-
-                                            // ❌ Admin thường KHÔNG thấy nút khóa
-                                            if (!callerIsSuper) {
-                                                return null // Không hiển thị nút
-                                            }
-
-                                            // ✅ Super Admin thấy nút khóa/mở khóa
-                                            return user.status === 'bi_khoa' ? (
+                                        {/* ✅ SỬA: Ban/Unban button - CHỈ HIỂN THỊ CHO SUPER ADMIN */}
+                                        {callerIsSuper && (
+                                            user.status === 'bi_khoa' ? (
                                                 <button
-                                                    onClick={() => unlockUser(user.id)}
-                                                    className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
-                                                    title="Mở khóa tài khoản"
+                                                    onClick={() => {
+                                                        onUnlockUser(user.id)
+                                                        onClose()
+                                                    }}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
                                                 >
-                                                    <Unlock size={14} /> Mở khóa
+                                                    <Unlock size={16} /> Mở khóa tài khoản
                                                 </button>
                                             ) : (
                                                 <button
                                                     onClick={() => {
-                                                        setSelectedUser(user)
-                                                        setShowBanModal(true)
+                                                        onBanUser(user.id)
+                                                        onClose()
                                                     }}
-                                                    className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 transition-colors"
-                                                    title="Khóa tài khoản"
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 transition-colors"
                                                 >
-                                                    <Ban size={14} /> Khóa
+                                                    <Ban size={16} /> Khóa tài khoản
                                                 </button>
                                             )
-                                        })()}
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -885,7 +907,7 @@ export default function UsersTab() {
         alert(errorMessage + '\n\n💡 Chi tiết kỹ thuật:\n' + errorStr)
     }
 
-    // Ban user - CẬP NHẬT
+    // Ban user - ✅ CẬP NHẬT ĐỂ KHỚP VỚI BACKEND
     const banUser = async (userId, reason) => {
         try {
             const targetUser = users.find(u => u.id === userId)
@@ -907,22 +929,14 @@ export default function UsersTab() {
                 return
             }
 
-            // ===========================
-            // CHECK QUYỀN KHÓA TÀI KHOẢN
-            // ===========================
             const callerIsSuper = currentUser.isSuper === true || currentUser.isSuper === 1 || currentUser.role === 'superadmin'
             const targetIsSuper = targetUser.isSuper === true || targetUser.isSuper === 1 || targetUser.role === 'superadmin'
 
-            // 🚫 Rule 1: Admin thường KHÔNG được khóa ai
-            if (currentUser.role === 'admin' && !callerIsSuper) {
-                alert('🚫 KHÔNG CÓ QUYỀN KHÓA TÀI KHOẢN\n\n' +
-                    'Chỉ Super Admin mới có quyền khóa tài khoản.\n\n' +
-                    '💡 Admin thường không có quyền này để đảm bảo an ninh hệ thống.\n' +
-                    'Vui lòng liên hệ Super Admin nếu cần hỗ trợ.')
-                return
-            }
+            // ===========================
+            // FRONTEND VALIDATION (KHỚP VỚI BACKEND)
+            // ===========================
 
-            // 🚫 Rule 2: Không tự khóa chính mình
+            // ❌ Rule 1: Không tự khóa bản thân
             if (currentUser.id === userId) {
                 alert('🚫 KHÔNG THỂ TỰ KHÓA CHÍNH MÌNH\n\n' +
                     'Bạn không thể tự khóa tài khoản của chính bạn qua API.\n\n' +
@@ -932,7 +946,7 @@ export default function UsersTab() {
                 return
             }
 
-            // 🚫 Rule 3: Super Admin khóa Super Admin khác (cần xác nhận)
+            // ❌ Rule 2: Chỉ Super Admin khóa Super Admin khác
             if (targetIsSuper && !callerIsSuper) {
                 alert('🚫 KHÔNG THỂ KHÓA SUPER ADMIN\n\n' +
                     'Chỉ Super Admin mới có quyền khóa Super Admin khác.\n\n' +
@@ -940,7 +954,7 @@ export default function UsersTab() {
                 return
             }
 
-            // 🚫 Rule 4: Khóa Admin (chỉ Super Admin)
+            // ❌ Rule 3: Chỉ Super Admin khóa Admin
             if (targetUser.role === 'admin' && !callerIsSuper) {
                 alert('🚫 KHÔNG THỂ KHÓA ADMIN\n\n' +
                     'Chỉ Super Admin mới có quyền khóa tài khoản Admin.\n\n' +
@@ -973,18 +987,23 @@ export default function UsersTab() {
             // ===========================
             // GỌI API KHÓA TÀI KHOẢN
             // ===========================
+            console.log(`[BanUser] Calling API to ban user ${userId}...`)
+
             const response = await apiCall(`/admin/users/${userId}/ban`, {
                 method: 'POST',
-                body: JSON.stringify({ reason: reason || 'Vi phạm quy định' })
+                body: JSON.stringify({ reason: reason || '' })
             })
 
+            console.log('[BanUser] API Response:', response)
+
             await loadUsers()
+            setShowBanModal(false)
 
             if (response.success) {
                 alert(`✅ ĐÃ KHÓA TÀI KHOẢN THÀNH CÔNG!\n\n` +
                     `Người dùng: ${targetUser.name}\n` +
                     `Email: ${targetUser.email}\n` +
-                    `Lý do: ${reason}\n` +
+                    `Lý do: ${reason || 'Không có'}\n` +
                     `Trạng thái mới: ${response.status || 'bi_khoa'}\n\n` +
                     `🔔 Người dùng này sẽ không thể đăng nhập cho đến khi được mở khóa.`)
             }
@@ -994,44 +1013,120 @@ export default function UsersTab() {
         }
     }
 
-    // Helper: Handle ban errors
+    // Helper: Handle ban errors - ✅ CẬP NHẬT
     const handleBanError = (error) => {
         const errorStr = error.message || ''
-        let errorMessage = 'Có lỗi xảy ra khi khóa tài khoản'
+        console.error('🔴 Ban Error Details:', {
+            message: errorStr,
+            stack: error.stack,
+            fullError: error
+        })
 
-        if (errorStr.includes('403') || errorStr.includes('Forbid')) {
-            errorMessage = '🚫 Bạn không có quyền khóa tài khoản này.\n\n' +
-                'Chỉ Super Admin mới có thể khóa Admin hoặc Super Admin khác.'
+        let errorMessage = '❌ Có lỗi xảy ra khi khóa tài khoản'
+
+        if (errorStr.includes('500') || errorStr.includes('Internal Server Error')) {
+            errorMessage = '🔧 LỖI SERVER - Stored Procedure\n\n' +
+                '📌 NGUYÊN NHÂN:\n' +
+                '• Stored procedure sp_LockUser chưa tồn tại\n' +
+                '• SP có lỗi logic hoặc validation\n' +
+                '• Trigger database từ chối thay đổi\n' +
+                '• Ràng buộc phân quyền trong database\n\n' +
+                '🔨 CÁCH SỬA:\n' +
+                '1. Kiểm tra SP: SELECT OBJECT_ID(\'dbo.sp_LockUser\')\n' +
+                '2. Tạo SP nếu chưa có (xem hướng dẫn)\n' +
+                '3. Test SP: EXEC sp_LockUser @ActorId=1, @TargetId=5, @Reason=\'Test\'\n' +
+                '4. Xem error log: EXEC sp_readerrorlog\n\n' +
+                '💡 Liên hệ quản trị viên hệ thống để fix stored procedure.'
+        } else if (errorStr.includes('403') || errorStr.includes('Forbid')) {
+            errorMessage = '🚫 KHÔNG CÓ QUYỀN KHÓA TÀI KHOẢN\n\n' +
+                '📌 Quy tắc phân quyền:\n' +
+                '• Chỉ Super Admin mới có quyền khóa tài khoản\n' +
+                '• Admin thường KHÔNG thể khóa bất kỳ ai\n' +
+                '• Super Admin khóa được: User, Admin, Super Admin khác\n' +
+                '• KHÔNG ai có thể tự khóa chính mình\n\n' +
+                '💡 Nếu bạn cần khóa tài khoản này, vui lòng:\n' +
+                '• Liên hệ Super Admin\n' +
+                '• Yêu cầu quyền Super Admin (nếu phù hợp)'
         } else if (errorStr.includes('400') || errorStr.includes('BadRequest')) {
-            errorMessage = '⚠️ Không thể tự khóa tài khoản của chính mình qua API.'
-        } else if (errorStr.includes('404')) {
-            errorMessage = '❓ Không tìm thấy người dùng.'
-        } else if (errorStr.includes('500')) {
-            errorMessage = '❌ Lỗi server khi thực thi stored procedure sp_LockUser.\n\n' +
-                'Vui lòng kiểm tra log server.'
+            errorMessage = '⚠️ YÊU CẦU KHÔNG HỢP LỆ\n\n' +
+                '📌 Lỗi có thể do:\n' +
+                '• Không thể tự khóa tài khoản của chính mình qua API.\n' +
+                '• Lý do khóa không hợp lệ\n' +
+                '• Dữ liệu gửi đi sai định dạng\n\n' +
+                '💡 Vui lòng kiểm tra lại thông tin và thử lại.'
+        } else if (errorStr.includes('404') || errorStr.includes('Not Found')) {
+            errorMessage = '❓ KHÔNG TÌM THẤY NGƯỜI DÙNG\n\n' +
+                'Người dùng này có thể:\n' +
+                '• Đã bị xóa khỏi hệ thống\n' +
+                '• Không tồn tại trong database\n' +
+                '• ID không hợp lệ\n\n' +
+                '💡 Vui lòng làm mới danh sách và thử lại.'
+        } else if (errorStr.includes('Unauthorized') || errorStr.includes('401')) {
+            errorMessage = '🔐 PHIÊN ĐĂNG NHẬP HẾT HẠN\n\n' +
+                'Vui lòng đăng nhập lại để tiếp tục.\n\n' +
+                '💡 Bạn sẽ được chuyển đến trang đăng nhập.'
         }
 
-        alert(errorMessage + '\n\n💡 Chi tiết: ' + errorStr)
+        alert(errorMessage + '\n\n🔍 Chi tiết kỹ thuật:\n' + errorStr)
     }
 
-    // Unlock user - CẬP NHẬT
+    // Unlock user - ✅ CẬP NHẬT
     const unlockUser = async (userId) => {
         try {
+            const targetUser = users.find(u => u.id === userId)
+            if (!targetUser) {
+                alert('❌ Không tìm thấy người dùng')
+                return
+            }
+
+            // Confirm trước khi mở khóa
+            if (!confirm(
+                `🔓 XÁC NHẬN MỞ KHÓA TÀI KHOẢN\n\n` +
+                `Người dùng: ${targetUser.name}\n` +
+                `Email: ${targetUser.email}\n` +
+                `Vai trò: ${getRoleText(targetUser.role, targetUser.isSuper)}\n\n` +
+                `Sau khi mở khóa, người dùng này sẽ có thể đăng nhập trở lại.\n\n` +
+                `Bạn có chắc chắn muốn mở khóa?`
+            )) return
+
+            console.log(`[UnlockUser] Calling API to unlock user ${userId}...`)
+
             const response = await apiCall(`/admin/users/${userId}/unlock`, {
                 method: 'POST'
             })
 
+            console.log('[UnlockUser] API Response:', response)
+
             await loadUsers()
+            setShowDetailModal(false)
 
             if (response.success) {
-                const user = users.find(u => u.id === userId)
-                alert(`✅ Đã mở khóa tài khoản thành công!\n\n` +
-                    `Người dùng: ${user?.name || 'N/A'}\n` +
-                    `Trạng thái: ${response.status || 'hoat_dong'}`)
+                alert(`✅ ĐÃ MỞ KHÓA TÀI KHOẢN THÀNH CÔNG!\n\n` +
+                    `Người dùng: ${targetUser.name}\n` +
+                    `Email: ${targetUser.email}\n` +
+                    `Trạng thái mới: ${response.status || 'hoat_dong'}\n\n` +
+                    `🔔 Người dùng này đã có thể đăng nhập trở lại.`)
             }
         } catch (error) {
-            console.error('Failed to unlock user:', error)
-            alert('❌ Có lỗi xảy ra khi mở khóa:\n\n' + error.message)
+            console.error('❌ Failed to unlock user:', error)
+
+            let errorMessage = 'Có lỗi xảy ra khi mở khóa tài khoản'
+            const errorStr = error.message || ''
+
+            if (errorStr.includes('500')) {
+                errorMessage = '❌ Lỗi server khi thực thi stored procedure sp_UnlockUser.\n\n' +
+                    'Vui lòng kiểm tra:\n' +
+                    '• SP sp_UnlockUser có tồn tại không\n' +
+                    '• Log server để xem chi tiết lỗi\n\n' +
+                    'Liên hệ quản trị viên hệ thống.'
+            } else if (errorStr.includes('403') || errorStr.includes('Forbid')) {
+                errorMessage = '🚫 Bạn không có quyền mở khóa tài khoản này.\n\n' +
+                    'Chỉ Super Admin mới có thể mở khóa tài khoản.'
+            } else if (errorStr.includes('404')) {
+                errorMessage = '❓ Không tìm thấy người dùng.\n\nVui lòng làm mới danh sách.'
+            }
+
+            alert(errorMessage + '\n\n💡 Chi tiết: ' + errorStr)
         }
     }
 
@@ -1051,8 +1146,8 @@ export default function UsersTab() {
     const stats = useMemo(() => {
         const total = pagination.total
         const superAdminCount = users.filter(u => u.isSuper || u.role === 'superadmin').length
-        const adminCount = users.filter(u => u.role === 'admin' && !u.isSuper).length
-        const userCount = users.filter(u => u.role === 'user' || (!u.role && !u.isSuper)).length
+        const adminCount = users.filter(u => u.role === 'admin' && !(u.isSuper === true || u.isSuper === 1)).length
+        const userCount = users.filter(u => u.role === 'user' || (!u.role && !(u.isSuper === true || u.isSuper === 1))).length
         const activeCount = users.filter(u => u.status === 'active').length
         const bannedCount = users.filter(u => u.status === 'bi_khoa').length
 
@@ -1185,7 +1280,7 @@ export default function UsersTab() {
                         <select
                             value={roleFilter}
                             onChange={(e) => setRoleFilter(e.target.value)}
-                            className="appearance-none rounded-2xl ring-1 ring-slate-200 bg-white pl-3 pr-10 py-2.5 text-sm outline-none focus:ring-blue-400 focus:ring-2 transition-all"
+                            className="appearance-none rounded-2xl ring-1 ring-slate-200 bg-white pl-3 pr-10 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                         >
                             <option value="all">Tất cả vai trò</option>
                             <option value="superadmin">⭐ Super Admin</option>
@@ -1330,12 +1425,12 @@ export default function UsersTab() {
                                                     const currentUser = users.find(u => u.email === currentUserData?.email)
                                                     const callerIsSuper = currentUser?.isSuper === true || currentUser?.isSuper === 1
 
-                                                    // ❌ Admin thường KHÔNG thấy nút khóa
+                                                    // ❌ Không phải Super Admin → KHÔNG hiển thị nút
                                                     if (!callerIsSuper) {
-                                                        return null // Không hiển thị nút
+                                                        return null
                                                     }
 
-                                                    // ✅ Super Admin thấy nút khóa/mở khóa
+                                                    // ✅ Super Admin → Hiển thị nút dựa trên trạng thái
                                                     return user.status === 'bi_khoa' ? (
                                                         <button
                                                             onClick={() => unlockUser(user.id)}
@@ -1436,17 +1531,20 @@ export default function UsersTab() {
                 )}
             </div>
 
-            {/* Modals */}
+            {/* Modals - ✅ CẬP NHẬT PROPS */}
             <UserDetailModal
                 user={selectedUser}
                 isOpen={showDetailModal}
                 onClose={() => setShowDetailModal(false)}
                 onRoleChange={changeUserRole}
-                onBanUser={(userId, reason) => {
-                    setShowDetailModal(false)
+                onBanUser={(userId) => {
+                    // Mở modal ban
+                    setSelectedUser(users.find(u => u.id === userId))
                     setShowBanModal(true)
                 }}
                 onUnlockUser={unlockUser}
+                users={users}                              // ✅ THÊM: Truyền users
+                currentUserEmail={getCurrentUserEmail()}   // ✅ THÊM: Truyền email hiện tại
             />
 
             <BanUserModal

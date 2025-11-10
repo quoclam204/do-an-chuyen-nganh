@@ -11,8 +11,8 @@ import {
 import DashboardTab from '../components/admin/DashboardTab'
 import FramesTab from '../components/admin/FramesTab'
 import UsersTab from '../components/admin/UsersTab'
-import ReportsTab from '../components/admin/ReportsTab'
-import SettingsTab from '../components/admin/SettingsTab'
+// import ReportsTab from '../components/admin/ReportsTab'
+// import SettingsTab from '../components/admin/SettingsTab'
 
 /* =========================
    Constants & Helpers
@@ -270,8 +270,8 @@ export default function Admin() {
     { id: 'dashboard', name: 'Tổng quan', icon: LayoutDashboard },
     { id: 'frames', name: 'Khung hình', icon: ImageIcon },
     { id: 'users', name: 'Người dùng', icon: Users },
-    { id: 'reports', name: 'Báo cáo', icon: FileText },
-    { id: 'settings', name: 'Cài đặt', icon: Settings },
+    // { id: 'reports', name: 'Báo cáo', icon: FileText },
+    // { id: 'settings', name: 'Cài đặt', icon: Settings },
   ]
 
   // Loading state
@@ -453,15 +453,6 @@ export default function Admin() {
                     {getGreetingMessage()}
                   </div>
                 </div>
-
-                {/* Enhanced search */}
-                <div className="hidden lg:flex items-center gap-2 rounded-2xl ring-1 ring-slate-200 bg-white px-3 py-2">
-                  <Search size={16} className="text-gray-400 shrink-0" />
-                  <input
-                    className="outline-none text-sm w-[20rem]"
-                    placeholder="Tìm kiếm khung hình, người dùng..."
-                  />
-                </div>
               </div>
 
               {/* Right section - Quick Stats + Notifications */}
@@ -603,8 +594,8 @@ export default function Admin() {
           {activeTab === 'dashboard' && <DashboardTab />}
           {activeTab === 'frames' && <FramesTab />}
           {activeTab === 'users' && <UsersTab />}
-          {activeTab === 'reports' && <ReportsTab />}
-          {activeTab === 'settings' && <SettingsTab />}
+          {/* {activeTab === 'reports' && <ReportsTab />} */}
+          {/* {activeTab === 'settings' && <SettingsTab />} */}
         </main>
       </div>
 

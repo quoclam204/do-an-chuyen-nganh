@@ -383,11 +383,9 @@ namespace Khunghinh.Api.Controllers
         [HttpPost("users/{id:long}/ban")]
         public async Task<IActionResult> BanUser(long id, [FromBody] BanUserDto dto)
         {
-            // 1️⃣ Lấy thông tin target user
             var targetUser = await _db.NguoiDungs.FindAsync(id);
             if (targetUser == null) return NotFound();
 
-            // 2️⃣ Lấy thông tin admin đang thực hiện (caller)
             var caller = await GetCallerAsync();
             if (caller == null) return Forbid("Caller information not found.");
 
@@ -396,13 +394,13 @@ namespace Khunghinh.Api.Controllers
             string targetRole = (targetUser.VaiTro ?? "user").Trim().ToLowerInvariant();
 
             // ===========================
-            // 3️⃣ KIỂM TRA QUYỀN HẠN
+            // KIỂM TRA QUYỀN HẠN
             // ===========================
 
             // ❌ Không tự khóa bản thân
             if (caller.Id == targetUser.Id)
                 return BadRequest("Không thể tự khóa tài khoản của chính bạn qua API.");
-            if (callerIsSuper)
+
             // ❌ SuperAdmin chỉ bị SuperAdmin khác khóa
             if (targetIsSuper && !callerIsSuper)
                 return Forbid("Chỉ Super Admin mới có quyền khóa Super Admin khác.");
@@ -412,19 +410,16 @@ namespace Khunghinh.Api.Controllers
                 return Forbid("Chỉ Super Admin mới có quyền khóa admin.");
 
             // ===========================
-            // 4️⃣ THỰC HIỆN KHÓA
+            // THỰC HIỆN KHÓA
             // ===========================
             try
             {
-                // Gọi stored procedure
                 await _db.Database.ExecuteSqlRawAsync(
                     "EXEC dbo.sp_LockUser @ActorId = {0}, @TargetId = {1}, @Reason = {2}", 
                     caller.Id, targetUser.Id, dto?.Reason ?? "");
 
-                // Reload để lấy trạng thái mới
                 var updated = await _db.NguoiDungs.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
                 
-                // Ghi log
                 Console.WriteLine($"[Admin] {caller.Email} khóa user {targetUser.Email} - Lý do: {dto?.Reason}");
                 
                 return Ok(new { success = true, status = updated?.TrangThai });

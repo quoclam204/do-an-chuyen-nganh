@@ -5,7 +5,7 @@
 GO */
 
 -- Azure target
-USE [KhunghinhDb];
+USE [Khunghinh];
 GO
 
 /* 0) DROP trigger nếu có */
@@ -516,3 +516,68 @@ SELECT COUNT(*) AS TotalSuper FROM dbo.NguoiDung WHERE IsSuperAdmin = 1;
 /*
 DELETE FROM dbo.NguoiDung
 WHERE Email IN (N'user1@gmail.com', N'user2@gmail.com', N'admin@gmail.com'); */
+
+-- Xóa procedure cũ nếu có
+IF OBJECT_ID('dbo.sp_LockUser', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_LockUser;
+GO
+
+-- ✅ Tạo lại với parameter @Reason
+CREATE PROCEDURE dbo.sp_LockUser
+  @ActorId  BIGINT,
+  @TargetId BIGINT,
+  @Reason   NVARCHAR(500) = NULL  -- ✅ Thêm parameter này
+AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @actorIsSuper BIT, @targetIsSuper BIT, @targetRole NVARCHAR(10);
+
+  -- Lấy thông tin caller và target
+  SELECT @actorIsSuper = IsSuperAdmin FROM dbo.NguoiDung WHERE Id = @ActorId;
+  SELECT @targetIsSuper = IsSuperAdmin, @targetRole = VaiTro FROM dbo.NguoiDung WHERE Id = @TargetId;
+
+  -- Validation quyền hạn
+  IF ISNULL(@targetIsSuper, 0) = 1 AND ISNULL(@actorIsSuper, 0) = 0
+    THROW 50002, N'Chỉ Super Admin mới có quyền khóa Super Admin.', 1;
+    
+  IF @targetRole = N'admin' AND ISNULL(@actorIsSuper, 0) = 0
+    THROW 50003, N'Chỉ Super Admin được khóa admin.', 1;
+
+  -- Cập nhật trạng thái
+  UPDATE dbo.NguoiDung 
+  SET TrangThai = N'bi_khoa', NgayCapNhat = SYSUTCDATETIME() 
+  WHERE Id = @TargetId;
+  
+  -- Ghi log với reason
+  PRINT N'User #' + CAST(@TargetId AS NVARCHAR) + N' bị khóa. Lý do: ' + ISNULL(@Reason, N'Không rõ');
+END;
+GO
+
+-- ===========================
+-- VERIFY PROCEDURE ĐÃ ĐƯỢC TẠO
+-- ===========================
+
+-- Kiểm tra parameters
+SELECT 
+    p.name AS ProcedureName,
+    par.name AS ParameterName,
+    t.name AS DataType,
+    par.max_length AS MaxLength
+FROM sys.procedures p
+LEFT JOIN sys.parameters par ON p.object_id = par.object_id
+LEFT JOIN sys.types t ON par.user_type_id = t.user_type_id
+WHERE p.name = 'sp_LockUser'
+ORDER BY par.parameter_id;
+
+-- Kết quả mong đợi:
+-- sp_LockUser  @ActorId   bigint   8
+-- sp_LockUser  @TargetId  bigint   8
+-- sp_LockUser  @Reason    nvarchar 1000  ← Dòng này phải xuất hiện
+
+PRINT N'✅ Stored procedure sp_LockUser đã được cập nhật thành công!';
+GO
+
+SELECT Id, Email, TenHienThi, TrangThai, NgayCapNhat
+FROM NguoiDung
+WHERE Id = 6;
+
