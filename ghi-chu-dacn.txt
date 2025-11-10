@@ -34,3 +34,6 @@ Deploy SQL (Azure SQL Database)
 dotnet add package System.Drawing.Common
 
 TEST API: https://localhost:7090/api/frames/alias/quoclam2004
+
+
+E:\DoAnChuyenNganh_Web\web-do-an-chuyen-nganh\khunghinh-server\Khunghinh.Api> (chạy chương trình)

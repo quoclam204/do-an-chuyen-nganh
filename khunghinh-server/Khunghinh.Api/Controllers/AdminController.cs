@@ -471,24 +471,158 @@ namespace Khunghinh.Api.Controllers
 
         // GET /api/admin/stats
         // Trả về số lượng tóm tắt để hiển thị ở dashboard
+        // GET /api/admin/stats?days=7
+        // Trả về số lượng tóm tắt để hiển thị ở dashboard
         [HttpGet("stats")]
-        public async Task<IActionResult> GetStats()
+        public async Task<IActionResult> GetStats([FromQuery] int days = 7)
         {
-            var totalFrames = await _db.KhungHinhs.CountAsync();
-            var publicFrames = await _db.KhungHinhs.CountAsync(x => x.CheDoHienThi == "cong_khai" && x.TrangThai == "dang_hoat_dong");
-            var totalUsers = await _db.NguoiDungs.CountAsync();
-            var reportsOpen = await _db.BaoCaoViPhams.CountAsync(r => r.TrangThaiXuLy != "da_xu_ly");
+            days = Math.Clamp(days, 1, 90); // giới hạn 1-90 ngày
 
-            // simple recent activity: last 5 frames
-            var recentFrames = await _db.KhungHinhs.OrderByDescending(x => x.NgayDang).Take(5)
-                .Select(x => new { x.Id, x.TieuDe, x.Alias, x.NgayDang }).AsNoTracking().ToListAsync();
+            // ===========================
+            // 👥 NGƯỜI DÙNG
+            // ===========================
+            var totalUsers = await _db.NguoiDungs.CountAsync();
+            var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
+            var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+
+            var newUsersLast7Days = await _db.NguoiDungs
+                .CountAsync(u => u.NgayTao >= sevenDaysAgo);
+
+            var activeUsersLast30Days = await _db.NguoiDungs
+                .CountAsync(u => (u.NgayCapNhat != null && u.NgayCapNhat >= thirtyDaysAgo) ||
+                                 u.NgayTao >= thirtyDaysAgo);
+
+            // ===========================
+            // 🖼️ KHUNG HÌNH
+            // ===========================
+            var totalFrames = await _db.KhungHinhs.CountAsync();
+            var publicFrames = await _db.KhungHinhs
+                .CountAsync(x => x.CheDoHienThi == "cong_khai" && x.TrangThai == "dang_hoat_dong");
+            var pausedFrames = await _db.KhungHinhs
+                .CountAsync(x => x.TrangThai != "dang_hoat_dong");
+
+            // ===========================
+            // 🚨 BÁO CÁO
+            // ===========================
+            var reportsOpen = await _db.BaoCaoViPhams
+                .CountAsync(r => r.TrangThaiXuLy != "da_xu_ly");
+
+            // ===========================
+            // 📈 BIỂU ĐỒ LƯỢT XEM/TẢI (ThongKeNgay)
+            // ===========================
+            var startDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-days));
+            var endDate = DateOnly.FromDateTime(DateTime.UtcNow);
+
+            var dailyStats = await _db.ThongKeNgays
+                .Where(x => x.Ngay >= startDate && x.Ngay <= endDate)
+                .GroupBy(x => x.Ngay)
+                .Select(g => new
+                {
+                    date = g.Key,
+                    views = g.Sum(x => x.Xem),
+                    downloads = g.Sum(x => x.Tai),
+                    swaps = g.Sum(x => x.DoiKhung),
+                    qrScans = g.Sum(x => x.QuetQr)
+                })
+                .OrderBy(x => x.date)
+                .ToListAsync();
+
+            var totalViewsInPeriod = dailyStats.Sum(x => x.views);
+            var totalDownloadsInPeriod = dailyStats.Sum(x => x.downloads);
+
+            // ===========================
+            // 🔥 TOP 5 KHUNG PHỔ BIẾN
+            // ===========================
+            var topFrames = await _db.ThongKeNgays
+                .Where(x => x.Ngay >= startDate && x.Ngay <= endDate)
+                .GroupBy(x => x.KhungHinhId)
+                .Select(g => new
+                {
+                    frameId = g.Key,
+                    views = g.Sum(x => x.Xem),
+                    downloads = g.Sum(x => x.Tai)
+                })
+                .OrderByDescending(x => x.views)
+                .Take(5)
+                .ToListAsync();
+
+            var topFrameIds = topFrames.Select(x => x.frameId).ToList();
+            var topFrameDetails = await _db.KhungHinhs
+                .Where(x => topFrameIds.Contains(x.Id))
+                .Include(x => x.ChuSoHuu)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.TieuDe,
+                    x.Alias,
+                    x.UrlXemTruoc,
+                    owner = x.ChuSoHuu == null ? null : new { x.ChuSoHuu.TenHienThi }
+                })
+                .AsNoTracking()
+                .ToListAsync();
+
+            var topFramesList = topFrames
+                .Select(tf =>
+                {
+                    var frame = topFrameDetails.FirstOrDefault(f => f.Id == tf.frameId);
+                    return frame == null ? null : new
+                    {
+                        id = frame.Id,
+                        title = frame.TieuDe,
+                        alias = frame.Alias,
+                        thumb = frame.UrlXemTruoc,
+                        owner = frame.owner?.TenHienThi,
+                        views = tf.views,
+                        downloads = tf.downloads
+                    };
+                })
+                .Where(x => x != null)
+                .ToList();
+
+            // ===========================
+            // 📅 HOẠT ĐỘNG GẦN ĐÂY
+            // ===========================
+            var recentFrames = await _db.KhungHinhs
+                .OrderByDescending(x => x.NgayDang)
+                .Take(5)
+                .Select(x => new { 
+                    x.Id, 
+                    tieuDe = x.TieuDe,  // ✅ camelCase
+                    alias = x.Alias,    // ✅ camelCase
+                    ngayDang = x.NgayDang // ✅ camelCase
+                })
+                .AsNoTracking()
+                .ToListAsync();
 
             return Ok(new
             {
-                totalFrames,
-                publicFrames,
-                totalUsers,
-                reportsOpen,
+                // Tổng quan
+                users = new
+                {
+                    total = totalUsers,
+                    newLast7Days = newUsersLast7Days,
+                    activeLast30Days = activeUsersLast30Days
+                },
+                frames = new
+                {
+                    total = totalFrames,
+                    public_ = publicFrames,
+                    paused = pausedFrames
+                },
+                reports = new { open = reportsOpen },
+
+                // ✅ DỮ LIỆU BIỂU ĐỒ (quan trọng nhất)
+                chart = new
+                {
+                    period = $"{days} days",
+                    totalViews = totalViewsInPeriod,
+                    totalDownloads = totalDownloadsInPeriod,
+                    // ✅ Mảng dữ liệu theo ngày để vẽ chart
+                    dailyData = dailyStats
+                },
+
+                // Top frames & recent
+                topFrames = topFramesList,
                 recentFrames
             });
         }

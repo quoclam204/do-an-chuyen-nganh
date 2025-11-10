@@ -1,4 +1,31 @@
-import { ImageIcon, Users, Plus, FileText } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ImageIcon, Users, Plus, FileText, Activity, TrendingUp, Clock } from 'lucide-react'
+import { Line } from 'react-chartjs-2'
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+} from 'chart.js'
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+)
+
+// ✅ Giống Editor.jsx - loại bỏ trailing slash
+const API_BASE = (import.meta.env.VITE_API_ORIGIN || 'http://localhost:7090').replace(/\/$/, '')
 
 const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('vi-VN') : n)
 
@@ -19,6 +46,7 @@ function StatusBadge({ status }) {
 }
 
 function Sparkline({ values = [] }) {
+    if (!values || values.length === 0) return null
     const w = 240, h = 56, pad = 6
     const max = Math.max(...values), min = Math.min(...values)
     const pts = values.map((v, i) => {
@@ -38,31 +66,256 @@ function Sparkline({ values = [] }) {
     )
 }
 
-function TrendingTable() {
-    const rows = [
-        { title: 'Giáng sinh 2025', clicks: 1240, uses: 512, status: 'active' },
-        { title: 'Trung thu', clicks: 920, uses: 448, status: 'active' },
-        { title: 'Ngày Nhà giáo', clicks: 310, uses: 190, status: 'pending' },
-        { title: 'Quốc Khánh', clicks: 150, uses: 70, status: 'inactive' },
-    ]
+// ===== CHART: LƯỢT XEM & TẢI =====
+function ViewDownloadChart({ data, period }) {
+    if (!data || !data.dailyData || data.dailyData.length === 0) {
+        return (
+            <div className="rounded-2xl ring-1 ring-slate-200/75 bg-white p-6 shadow-sm">
+                <h3 className="text-lg font-semibold mb-4">📈 Xu hướng tương tác</h3>
+                <div className="text-center py-12 text-slate-500">Chưa có dữ liệu</div>
+            </div>
+        )
+    }
+
+    const chartData = {
+        labels: data.dailyData.map(d => {
+            const date = new Date(d.date)
+            return `${date.getDate()}/${date.getMonth() + 1}`
+        }),
+        datasets: [
+            {
+                label: 'Lượt xem',
+                data: data.dailyData.map(d => d.views),
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true,
+                yAxisID: 'y',
+            },
+            {
+                label: 'Lượt tải',
+                data: data.dailyData.map(d => d.downloads),
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.4,
+                fill: true,
+                yAxisID: 'y1',
+            }
+        ]
+    }
+
+    const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        plugins: {
+            legend: {
+                position: 'top',
+                labels: {
+                    usePointStyle: true,
+                    padding: 15,
+                    font: { size: 12 }
+                }
+            },
+            tooltip: {
+                backgroundColor: '#fff',
+                titleColor: '#1e293b',
+                bodyColor: '#64748b',
+                borderColor: '#e2e8f0',
+                borderWidth: 1,
+                padding: 12,
+                displayColors: true,
+                callbacks: {
+                    label: function (context) {
+                        return `${context.dataset.label}: ${context.parsed.y.toLocaleString('vi-VN')}`
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: { color: '#64748b', font: { size: 11 } }
+            },
+            y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                grid: { color: '#f1f5f9' },
+                ticks: {
+                    color: '#64748b',
+                    font: { size: 11 },
+                    callback: function (value) {
+                        return value.toLocaleString('vi-VN')
+                    }
+                }
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                grid: { drawOnChartArea: false },
+                ticks: {
+                    color: '#64748b',
+                    font: { size: 11 },
+                    callback: function (value) {
+                        return value.toLocaleString('vi-VN')
+                    }
+                }
+            }
+        }
+    }
+
+    return (
+        <div className="rounded-2xl ring-1 ring-slate-200/75 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+                <div>
+                    <h3 className="text-lg font-semibold">📈 Xu hướng tương tác</h3>
+                    <p className="text-sm text-slate-500 mt-1">
+                        Lượt xem và tải xuống trong {data.period}
+                    </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-right">
+                    <div>
+                        <div className="text-2xl font-bold text-blue-600">{fmt(data.totalViews)}</div>
+                        <div className="text-xs text-slate-500">Tổng lượt xem</div>
+                    </div>
+                    <div>
+                        <div className="text-2xl font-bold text-emerald-600">{fmt(data.totalDownloads)}</div>
+                        <div className="text-xs text-slate-500">Tổng lượt tải</div>
+                    </div>
+                </div>
+            </div>
+            <div style={{ height: '300px' }}>
+                <Line data={chartData} options={options} />
+            </div>
+        </div>
+    )
+}
+
+// ===== USER & FRAME STATS =====
+function StatsGrid({ users, frames }) {
+    return (
+        <div className="grid lg:grid-cols-2 gap-6">
+            {/* User Stats */}
+            <div className="rounded-2xl ring-1 ring-slate-200/75 bg-white p-6 shadow-sm">
+                <h3 className="text-lg font-semibold mb-4">👥 Thống kê người dùng</h3>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50">
+                        <div className="flex items-center gap-3">
+                            <div className="size-10 rounded-lg bg-blue-100 text-blue-600 grid place-items-center">
+                                <Users size={20} />
+                            </div>
+                            <div>
+                                <div className="text-sm text-slate-600">Tổng số người dùng</div>
+                                <div className="text-2xl font-bold">{fmt(users?.total || 0)}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-50">
+                        <div className="flex items-center gap-3">
+                            <div className="size-10 rounded-lg bg-emerald-100 text-emerald-600 grid place-items-center">
+                                <Activity size={20} />
+                            </div>
+                            <div>
+                                <div className="text-sm text-slate-600">Hoạt động 30 ngày qua</div>
+                                <div className="text-2xl font-bold">{fmt(users?.activeLast30Days || 0)}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-amber-50">
+                        <div className="flex items-center gap-3">
+                            <div className="size-10 rounded-lg bg-amber-100 text-amber-600 grid place-items-center">
+                                <TrendingUp size={20} />
+                            </div>
+                            <div>
+                                <div className="text-sm text-slate-600">Mới trong 7 ngày</div>
+                                <div className="text-2xl font-bold">{fmt(users?.newLast7Days || 0)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Frame Stats */}
+            <div className="rounded-2xl ring-1 ring-slate-200/75 bg-white p-6 shadow-sm">
+                <h3 className="text-lg font-semibold mb-4">🖼️ Thống kê khung hình</h3>
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                        <div className="flex items-center gap-2">
+                            <span className="size-2 rounded-full bg-blue-500" />
+                            <span className="text-sm text-slate-700">Tổng số khung</span>
+                        </div>
+                        <span className="font-semibold text-slate-900">{fmt(frames?.total || 0)}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-emerald-200 bg-emerald-50">
+                        <div className="flex items-center gap-2">
+                            <span className="size-2 rounded-full bg-emerald-500" />
+                            <span className="text-sm text-emerald-700 font-medium">Công khai & hoạt động</span>
+                        </div>
+                        <span className="font-semibold text-emerald-900">{fmt(frames?.public_ || 0)}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                        <div className="flex items-center gap-2">
+                            <span className="size-2 rounded-full bg-slate-400" />
+                            <span className="text-sm text-slate-700">Tạm dừng / Không hoạt động</span>
+                        </div>
+                        <span className="font-semibold text-slate-900">{fmt(frames?.paused || 0)}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// ===== TOP FRAMES TABLE =====
+function TrendingTable({ frames }) {
+    if (!frames || frames.length === 0) {
+        return <div className="text-center py-8 text-slate-500">Chưa có dữ liệu</div>
+    }
+
     return (
         <div className="overflow-hidden rounded-xl ring-1 ring-slate-200/75 shadow-sm bg-white">
             <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-slate-600">
-                    <tr className="*:*:px-4 *:*:py-2">
-                        <th className="text-left">Khung</th>
-                        <th className="text-right">Lượt xem</th>
-                        <th className="text-right">Lượt dùng</th>
-                        <th className="text-left">Trạng thái</th>
+                    <tr>
+                        <th className="text-left px-4 py-3 font-semibold">Khung</th>
+                        <th className="text-right px-4 py-3 font-semibold">Lượt xem</th>
+                        <th className="text-right px-4 py-3 font-semibold">Lượt tải</th>
                     </tr>
                 </thead>
-                <tbody className="divide-y">
-                    {rows.map((r, i) => (
-                        <tr key={i} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 font-medium text-slate-900">{r.title}</td>
-                            <td className="px-4 py-3 text-right font-mono">{fmt(r.clicks)}</td>
-                            <td className="px-4 py-3 text-right font-mono">{fmt(r.uses)}</td>
-                            <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                <tbody className="divide-y divide-slate-100">
+                    {frames.map((frame, i) => (
+                        <tr key={i} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                    {frame.thumb && (
+                                        <img
+                                            src={`${API_BASE}${frame.thumb}`}
+                                            alt={frame.title}
+                                            className="w-10 h-10 rounded-lg object-cover ring-1 ring-slate-200"
+                                            onError={(e) => e.target.style.display = 'none'}
+                                        />
+                                    )}
+                                    <div className="min-w-0">
+                                        <div className="font-medium text-slate-900 truncate">{frame.title}</div>
+                                        <div className="text-xs text-slate-500">/{frame.alias}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td className="px-4 py-3 text-right font-mono text-slate-700">
+                                {fmt(frame.views)}
+                            </td>
+                            <td className="px-4 py-3 text-right font-mono text-slate-700">
+                                {fmt(frame.downloads)}
+                            </td>
                         </tr>
                     ))}
                 </tbody>
@@ -71,24 +324,162 @@ function TrendingTable() {
     )
 }
 
-export default function DashboardTab() {
-    const statCards = [
-        { title: 'Tổng khung hình', value: 5678, diff: +8, icon: ImageIcon, color: 'from-blue-500 to-indigo-500' },
-        { title: 'Người dùng', value: 1234, diff: +3, icon: Users, color: 'from-emerald-500 to-teal-500' },
-        { title: 'Tạo mới hôm nay', value: 234, diff: +12, icon: Plus, color: 'from-amber-500 to-orange-500' },
-        { title: 'Báo cáo chờ xử lý', value: 12, diff: -1, icon: FileText, color: 'from-rose-500 to-pink-500' },
-    ]
+// ===== RECENT ACTIVITY =====
+function RecentActivity({ frames }) {
+    if (!frames || frames.length === 0) {
+        return (
+            <div className="rounded-2xl ring-1 ring-slate-200/75 bg-white p-6 shadow-sm">
+                <h3 className="text-lg font-semibold mb-4">Hoạt động gần đây</h3>
+                <div className="text-center py-8 text-slate-500">Chưa có hoạt động</div>
+            </div>
+        )
+    }
 
-    const activity = [
-        { dot: 'bg-green-500', text: <>Người dùng <b>Nguyễn Văn A</b> tạo khung mới</>, time: '2 phút trước' },
-        { dot: 'bg-blue-500', text: <>Tài khoản <b>Trần Thị B</b> vừa đăng ký</>, time: '15 phút trước' },
-        { dot: 'bg-amber-500', text: <>Khung <b>"Giáng sinh 2025"</b> được cập nhật</>, time: '1 giờ trước' },
-        { dot: 'bg-rose-500', text: <>4 báo cáo mới từ người dùng</>, time: 'Hôm nay' },
+    const formatTimeAgo = (dateStr) => {
+        const date = new Date(dateStr)
+        const now = new Date()
+        const diffMs = now - date
+        const diffMins = Math.floor(diffMs / 60000)
+        const diffHours = Math.floor(diffMs / 3600000)
+        const diffDays = Math.floor(diffMs / 86400000)
+
+        if (diffMins < 1) return 'Vừa xong'
+        if (diffMins < 60) return `${diffMins} phút trước`
+        if (diffHours < 24) return `${diffHours} giờ trước`
+        return `${diffDays} ngày trước`
+    }
+
+    return (
+        <div className="rounded-2xl ring-1 ring-slate-200/75 bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-semibold mb-4">Hoạt động gần đây</h3>
+            <div className="space-y-3">
+                {frames.map((frame, i) => (
+                    <div key={i} className="flex items-start gap-3 text-sm">
+                        <span className="size-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                            <div className="text-slate-700">
+                                {/* ✅ Sửa từ frame.TieuDe -> frame.tieuDe */}
+                                Khung <b className="text-slate-900">{frame.tieuDe}</b> được tạo mới
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
+                                <Clock size={12} />
+                                {/* ✅ Sửa từ frame.NgayDang -> frame.ngayDang */}
+                                {formatTimeAgo(frame.ngayDang)}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+// ===== MAIN COMPONENT =====
+export default function DashboardTab() {
+    const [dashboardData, setDashboardData] = useState(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
+    const [period, setPeriod] = useState(7) // 7 hoặc 30 ngày
+
+    useEffect(() => {
+        loadDashboardData()
+    }, [period])
+
+    const loadDashboardData = async () => {
+        try {
+            setLoading(true)
+            setError(null)
+
+            // ✅ Gọi API với endpoint chuẩn
+            const response = await fetch(`${API_BASE}/api/admin/stats?days=${period}`, {
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+
+            if (!response.ok) {
+                const errorText = await response.text()
+                throw new Error(`HTTP ${response.status}: ${errorText}`)
+            }
+
+            const data = await response.json()
+            console.log('✅ Dashboard data loaded:', data)
+            setDashboardData(data)
+        } catch (error) {
+            console.error('❌ Dashboard load error:', error)
+            setError(error.message)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-slate-600">Đang tải dữ liệu...</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                    <div className="text-rose-600 text-lg font-semibold mb-2">⚠️ Lỗi tải dữ liệu</div>
+                    <p className="text-slate-600 mb-4">{error}</p>
+                    <button
+                        onClick={loadDashboardData}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        Thử lại
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    const statCards = [
+        {
+            title: 'Tổng khung hình',
+            value: dashboardData?.frames?.total || 0,
+            diff: 0,
+            icon: ImageIcon,
+            color: 'from-blue-500 to-indigo-500',
+            sparkline: [5, 8, 6, 10, 12, 9, 15, 11, 14, dashboardData?.frames?.total || 0]
+        },
+        {
+            title: 'Người dùng',
+            value: dashboardData?.users?.total || 0,
+            diff: 0,
+            icon: Users,
+            color: 'from-emerald-500 to-teal-500',
+            sparkline: [10, 15, 12, 18, 20, 17, 22, 19, 24, dashboardData?.users?.total || 0]
+        },
+        {
+            title: 'Mới 7 ngày qua',
+            value: dashboardData?.users?.newLast7Days || 0,
+            diff: 0,
+            icon: Plus,
+            color: 'from-amber-500 to-orange-500',
+            sparkline: [2, 3, 5, 4, 6, 8, 7, 9, 10, dashboardData?.users?.newLast7Days || 0]
+        },
+        {
+            title: 'Báo cáo chờ xử lý',
+            value: dashboardData?.reports?.open || 0,
+            diff: 0,
+            icon: FileText,
+            color: 'from-rose-500 to-pink-500',
+            sparkline: [5, 3, 4, 2, 3, 5, 4, 3, 2, dashboardData?.reports?.open || 0]
+        },
     ]
 
     return (
         <div className="space-y-8">
-            {/* Stats */}
+            {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {statCards.map((s, i) => {
                     const Icon = s.icon
@@ -102,38 +493,52 @@ export default function DashboardTab() {
                                     </div>
                                 </div>
                                 <div className="mt-2 text-3xl font-bold tracking-tight">{fmt(s.value)}</div>
-                                <div className={`mt-1 text-xs ${s.diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                    {s.diff >= 0 ? '▲' : '▼'} {Math.abs(s.diff)}% so với hôm qua
-                                </div>
-                                <Sparkline values={[7, 9, 12, 8, 10, 14, 12, 15, 18, 16]} />
+                                <Sparkline values={s.sparkline} />
                             </div>
                         </div>
                     )
                 })}
             </div>
 
+            {/* Period Selector */}
+            <div className="flex justify-end gap-2">
+                <button
+                    onClick={() => setPeriod(7)}
+                    className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${period === 7
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                >
+                    7 ngày
+                </button>
+                <button
+                    onClick={() => setPeriod(30)}
+                    className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${period === 30
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                >
+                    30 ngày
+                </button>
+            </div>
+
+            {/* Chart */}
+            <ViewDownloadChart data={dashboardData?.chart} period={period} />
+
+            {/* User & Frame Stats */}
+            <StatsGrid users={dashboardData?.users} frames={dashboardData?.frames} />
+
             {/* Trending + Activity */}
             <div className="grid lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 rounded-2xl ring-1 ring-slate-200/75 bg-white p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold">Khung thịnh hành</h3>
-                        <button className="text-sm text-blue-600 hover:underline">Xem tất cả</button>
+                        <span className="text-xs text-slate-500">Top 5 trong {period} ngày</span>
                     </div>
-                    <TrendingTable />
+                    <TrendingTable frames={dashboardData?.topFrames} />
                 </div>
 
-                <div className="rounded-2xl ring-1 ring-slate-200/75 bg-white p-6 shadow-sm">
-                    <h3 className="text-lg font-semibold mb-4">Hoạt động gần đây</h3>
-                    <div className="space-y-3">
-                        {activity.map((a, i) => (
-                            <div key={i} className="flex items-center text-sm text-slate-700">
-                                <span className={`size-2 rounded-full ${a.dot} mr-3`} />
-                                <span className="min-w-0">{a.text}</span>
-                                <span className="ml-auto text-slate-400 whitespace-nowrap">{a.time}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                <RecentActivity frames={dashboardData?.recentFrames} />
             </div>
         </div>
     )
