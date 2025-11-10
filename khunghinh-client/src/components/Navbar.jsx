@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Menu, X, ChevronDown, User, Image, LogOut, RefreshCw } from 'lucide-react'
+import { Menu, X, ChevronDown, User, Image, LogOut, RefreshCw, Crop, FileImage, ImageIcon } from 'lucide-react'
 import Login from '../pages/Login'
 import { authApi } from '../services/authApi'
 
@@ -9,9 +9,11 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [me, setMe] = useState(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false) // ✅ Thêm state cho dropdown công cụ
   const [loginModalOpen, setLoginModalOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false) // ✅ Thêm loading state
   const dropdownRef = useRef(null)
+  const toolsDropdownRef = useRef(null) // ✅ Thêm ref cho dropdown công cụ
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -85,6 +87,7 @@ export default function Navbar() {
   useEffect(() => {
     setOpen(false)
     setDropdownOpen(false)
+    setToolsDropdownOpen(false) // ✅ Đóng dropdown công cụ khi đổi route
   }, [location.pathname])
 
   // 🔍 DEBUG: Kiểm tra dữ liệu user
@@ -110,6 +113,9 @@ export default function Navbar() {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false)
+      }
+      if (toolsDropdownRef.current && !toolsDropdownRef.current.contains(event.target)) {
+        setToolsDropdownOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -169,8 +175,60 @@ export default function Navbar() {
 
           {/* Menu Desktop */}
           <div className="hidden md:flex items-center gap-8 text-gray-800 font-medium">
-            {/* Luôn hiện */}
-            <NavLink to="/tools" className="hover:text-blue-600 transition">Công cụ</NavLink>
+            {/* ✅ Dropdown Công cụ */}
+            <div className="relative" ref={toolsDropdownRef}>
+              <button
+                onClick={() => setToolsDropdownOpen(!toolsDropdownOpen)}
+                className="flex items-center gap-1 text-gray-800 hover:text-blue-600 font-medium transition"
+              >
+                Công cụ
+                <ChevronDown
+                  size={16}
+                  className={`transition-transform duration-200 ${toolsDropdownOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {toolsDropdownOpen && (
+                <div className="absolute left-0 mt-3 w-60 bg-white/95 backdrop-blur-sm border border-gray-200 shadow-xl rounded-xl py-2 z-50">
+                  {/* Tam giác nhỏ */}
+                  <div className="absolute -top-2 left-6 w-4 h-4 bg-white border-l border-t border-gray-200 rotate-45"></div>
+
+                  {[
+                    {
+                      to: '/compress',
+                      title: 'Nén ảnh',
+                      desc: 'Giảm dung lượng nhanh chóng'
+                    },
+                    {
+                      to: '/resize',
+                      title: 'Thay đổi kích thước',
+                      desc: 'Tùy chỉnh chiều rộng và cao'
+                    },
+                    {
+                      to: '/image-to-pdf',
+                      title: 'Ảnh sang PDF',
+                      desc: 'Chuyển đổi ảnh thành file PDF'
+                    }
+                  ].map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setToolsDropdownOpen(false)}
+                      className="block px-4 py-2.5 hover:bg-blue-50/70 transition rounded-lg group"
+                    >
+                      <div className="font-semibold text-gray-800 group-hover:text-blue-700">
+                        {item.title}
+                      </div>
+                      <div className="text-xs text-gray-500 group-hover:text-blue-600">
+                        {item.desc}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+
             <NavLink to="/trending" className="hover:text-blue-600 transition">Xu hướng</NavLink>
 
             {/* Chỉ hiện khi đã đăng nhập */}
@@ -320,22 +378,59 @@ export default function Navbar() {
             id="mobile-menu"
             className="md:hidden px-6 pb-5 pt-2 space-y-4 bg-white/95 supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:backdrop-blur-md border-t border-gray-200"
           >
-            {/* Luôn hiển thị */}
-            <NavLink onClick={() => setOpen(false)} to="/tools" className="block text-gray-800 py-2">
-              Công cụ
-            </NavLink>
+            {/* ✅ Dropdown Công cụ Mobile */}
+            <div>
+              <button
+                onClick={() => setToolsDropdownOpen(!toolsDropdownOpen)}
+                className="flex items-center justify-between w-full text-gray-800 py-2"
+              >
+                <span>Công cụ</span>
+                <ChevronDown
+                  size={16}
+                  className={`transition-transform ${toolsDropdownOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {toolsDropdownOpen && (
+                <div className="pl-4 space-y-2 mt-2">
+                  <Link
+                    to="/resize"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2 text-gray-600 py-2"
+                  >
+                    <Crop size={16} />
+                    <span>Thay đổi kích thước</span>
+                  </Link>
+                  <Link
+                    to="/image-to-pdf"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2 text-gray-600 py-2"
+                  >
+                    <FileImage size={16} />
+                    <span>Ảnh sang PDF</span>
+                  </Link>
+                  <Link
+                    to="/tools"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2 text-blue-600 py-2 font-medium"
+                  >
+                    <ImageIcon size={16} />
+                    <span>Xem tất cả</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+
             <NavLink onClick={() => setOpen(false)} to="/trending" className="block text-gray-800 py-2">
               Xu hướng
             </NavLink>
 
-            {/* Chỉ hiển thị khi đăng nhập */}
             {isLoggedIn && (
               <NavLink onClick={() => setOpen(false)} to="/create-frame" className="block text-gray-800 py-2">
                 Tạo khung
               </NavLink>
             )}
 
-            {/* Chỉ hiển thị khi là admin */}
             {isAdmin && (
               <NavLink onClick={() => setOpen(false)} to="/admin" className="block text-purple-600 font-semibold py-2">
                 👑 Quản trị

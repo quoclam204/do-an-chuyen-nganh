@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState, useEffect } from "react"
 import { Upload, Trash, ArrowUp, ArrowDown, FileDown } from "lucide-react"
 import { jsPDF } from "jspdf"
 
@@ -11,18 +11,25 @@ export default function ImageToPdf() {
   const [fitMode, setFitMode] = useState("contain")       // contain | cover
   const [fileName, setFileName] = useState("anh-sang-pdf.pdf")
   const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const openPicker = () => fileRef.current?.click()
 
-  const onPick = (e) => {
+  const onPick = async (e) => {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
-    const mapped = files.map(f => ({
-      file: f,
-      url: URL.createObjectURL(f),
-      name: f.name
-    }))
-    setItems(prev => [...prev, ...mapped])
+
+    setLoading(true)
+    try {
+      const mapped = files.map(f => ({
+        file: f,
+        url: URL.createObjectURL(f),
+        name: f.name
+      }))
+      setItems(prev => [...prev, ...mapped])
+    } finally {
+      setLoading(false)
+    }
     e.target.value = "" // reset input
   }
 
@@ -30,6 +37,7 @@ export default function ImageToPdf() {
     setItems(arr => {
       const next = [...arr]
       const it = next[idx]
+      // CHỈ revoke khi xóa
       if (it?.url) URL.revokeObjectURL(it.url)
       next.splice(idx, 1)
       return next
@@ -41,18 +49,14 @@ export default function ImageToPdf() {
       const next = [...arr]
       const j = idx + dir
       if (j < 0 || j >= next.length) return next
+      // Swap vị trí KHÔNG revoke URL
       const tmp = next[idx]; next[idx] = next[j]; next[j] = tmp
       return next
     })
   }
 
-  // dọn URL khi rời trang
-  useEffect(() => {
-    return () => items.forEach(it => it.url && URL.revokeObjectURL(it.url))
-  }, [items])
-
   const ensurePdfName = (name) => {
-    if (!name) return "output.pdf"
+    if (!name || !name.trim()) return "anh-sang-pdf.pdf"
     const n = name.trim()
     return n.toLowerCase().endsWith(".pdf") ? n : `${n}.pdf`
   }
@@ -74,11 +78,9 @@ export default function ImageToPdf() {
       im.src = dataUrl
     })
 
-  // Vẽ ảnh vào canvas theo contain/cover rồi trả về PNG dataURL (ổn định với jsPDF)
   const renderFittedPng = async (dataUrl, innerWmm, innerHmm, fit = "contain") => {
     const im = await loadImage(dataUrl)
 
-    // Độ phân giải nội bộ cho canvas (mm -> px). scale=4 đủ nét, không quá nặng.
     const scale = 4
     const pxW = Math.max(1, Math.round(innerWmm * scale))
     const pxH = Math.max(1, Math.round(innerHmm * scale))
@@ -153,6 +155,13 @@ export default function ImageToPdf() {
     }
   }
 
+  // Cleanup khi component unmount
+  useEffect(() => {
+    return () => {
+      items.forEach(it => it.url && URL.revokeObjectURL(it.url))
+    }
+  }, [])
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
       <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 text-center">Ảnh → PDF</h1>
@@ -164,11 +173,12 @@ export default function ImageToPdf() {
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
           onClick={openPicker}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700"
+          disabled={loading}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:bg-blue-400"
         >
-          <Upload size={18}/> Chọn ảnh
+          <Upload size={18} /> {loading ? "Đang tải..." : "Chọn ảnh"}
         </button>
-        <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onPick}/>
+        <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onPick} />
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-700">Tên file</span>
           <input
@@ -198,7 +208,7 @@ export default function ImageToPdf() {
                       title="Lên"
                       disabled={i === 0}
                     >
-                      <ArrowUp size={16}/>
+                      <ArrowUp size={16} />
                     </button>
                     <button
                       onClick={() => move(i, +1)}
@@ -206,14 +216,14 @@ export default function ImageToPdf() {
                       title="Xuống"
                       disabled={i === items.length - 1}
                     >
-                      <ArrowDown size={16}/>
+                      <ArrowDown size={16} />
                     </button>
                     <button
                       onClick={() => removeAt(i)}
                       className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-md border hover:bg-red-50 text-red-600"
                       title="Xoá"
                     >
-                      <Trash size={16}/>
+                      <Trash size={16} />
                     </button>
                   </div>
                 </li>
@@ -228,7 +238,7 @@ export default function ImageToPdf() {
             <div className="mt-4 grid grid-cols-2 gap-3">
               <label className="text-sm">
                 <div className="text-gray-700 mb-1">Khổ giấy</div>
-                <select className="border rounded-lg px-3 py-2 w-full" value={pageSize} onChange={e=>setPageSize(e.target.value)}>
+                <select className="border rounded-lg px-3 py-2 w-full" value={pageSize} onChange={e => setPageSize(e.target.value)}>
                   <option value="a4">A4 (210×297mm)</option>
                   <option value="letter">Letter (216×279mm)</option>
                 </select>
@@ -236,7 +246,7 @@ export default function ImageToPdf() {
 
               <label className="text-sm">
                 <div className="text-gray-700 mb-1">Chiều giấy</div>
-                <select className="border rounded-lg px-3 py-2 w-full" value={orientation} onChange={e=>setOrientation(e.target.value)}>
+                <select className="border rounded-lg px-3 py-2 w-full" value={orientation} onChange={e => setOrientation(e.target.value)}>
                   <option value="p">Dọc (Portrait)</option>
                   <option value="l">Ngang (Landscape)</option>
                 </select>
@@ -248,15 +258,15 @@ export default function ImageToPdf() {
                   type="number" min={0} max={50}
                   className="border rounded-lg px-3 py-2 w-full"
                   value={margin}
-                  onChange={e=>setMargin(Math.max(0, Math.min(50, +e.target.value || 0)))}
+                  onChange={e => setMargin(Math.max(0, Math.min(50, +e.target.value || 0)))}
                 />
               </label>
 
               <label className="text-sm">
                 <div className="text-gray-700 mb-1">Cách hiển thị</div>
-                <select className="border rounded-lg px-3 py-2 w-full" value={fitMode} onChange={e=>setFitMode(e.target.value)}>
-                  <option value="contain">Contain (đủ khung, có viền)</option>
-                  <option value="cover">Cover (phủ kín, có thể cắt)</option>
+                <select className="border rounded-lg px-3 py-2 w-full" value={fitMode} onChange={e => setFitMode(e.target.value)}>
+                  <option value="contain">Vừa khung (có viền trắng)</option>
+                  <option value="cover">Đầy trang (cắt bớt nếu cần)</option>
                 </select>
               </label>
             </div>
@@ -266,7 +276,7 @@ export default function ImageToPdf() {
               disabled={!items.length || busy}
               className={`mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white ${(!items.length || busy) ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
             >
-              <FileDown size={18}/> {busy ? "Đang tạo PDF…" : "Tạo & Tải về"}
+              <FileDown size={18} /> {busy ? "Đang tạo PDF…" : "Tạo & Tải về"}
             </button>
           </aside>
         </div>
