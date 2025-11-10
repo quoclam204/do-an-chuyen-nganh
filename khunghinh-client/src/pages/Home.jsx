@@ -11,6 +11,7 @@ import { Play } from "lucide-react";
 import { FileDown } from 'lucide-react'
 
 import { Link } from "react-router-dom";
+import Login from '../pages/Login'
 
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 
@@ -76,7 +77,35 @@ function BlueCubesBackground() {
 export default function Home() {
   const [frames, setFrames] = useState([])
   const [trendingFrames, setTrendingFrames] = useState([])
+  const [loginModalOpen, setLoginModalOpen] = useState(false) // ✅ Thêm state modal
+  const [me, setMe] = useState(null) // ✅ State user
   const nav = useNavigate()
+
+  // ✅ Đọc thông tin user từ localStorage
+  const readMe = () => {
+    try { return JSON.parse(localStorage.getItem('kh_me') || 'null') } catch { return null }
+  }
+
+  // ✅ Khởi tạo user khi mount
+  useEffect(() => {
+    setMe(readMe())
+  }, [])
+
+  // ✅ Lắng nghe thay đổi từ Login modal
+  useEffect(() => {
+    const sync = () => {
+      const localUser = readMe()
+      setMe(localUser)
+    }
+
+    window.addEventListener('kh_me_changed', sync)
+    window.addEventListener('storage', sync)
+
+    return () => {
+      window.removeEventListener('kh_me_changed', sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
 
   useEffect(() => {
     getFrames().then(setFrames)
@@ -204,6 +233,16 @@ export default function Home() {
     return `${day}/${month}/${year}`;
   };
 
+  // ✅ Handler cho nút "TẠO NGAY"
+  const handleCreateFrame = (e) => {
+    e.preventDefault()
+    if (!me) {
+      setLoginModalOpen(true) // Hiện modal đăng nhập
+    } else {
+      nav('/create-frame') // Chuyển đến trang tạo khung
+    }
+  }
+
   return (
     <div>
       {/* ============ HERO ============ */}
@@ -235,12 +274,12 @@ export default function Home() {
             </p>
 
             <div className="flex flex-wrap gap-4 pt-2">
-              <a
-                href="/editor"
+              <button
+                onClick={handleCreateFrame}
                 className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-md"
               >
                 TẠO NGAY
-              </a>
+              </button>
               <a
                 href="/trending"
                 className="px-6 py-3 rounded-xl font-semibold text-gray-800 ring-1 ring-gray-300 hover:bg-gray-50 transition"
@@ -543,6 +582,11 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {/* ============ LOGIN MODAL ============ */}
+      {loginModalOpen && (
+        <Login onClose={() => setLoginModalOpen(false)} />
+      )}
     </div>
   )
 }
