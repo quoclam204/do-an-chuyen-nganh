@@ -126,6 +126,39 @@ export default function Editor() {
   const [text, setText] = useState('Tự hào Việt Nam')
   const [textSize, setTextSize] = useState(28)
   const [textColor, setTextColor] = useState('#0f172a')
+  const [textFont, setTextFont] = useState('Arial')
+  const [textStyle, setTextStyle] = useState('normal') // ✅ Thêm kiểu chữ
+  const [textWeight, setTextWeight] = useState('normal') // ✅ Thêm độ đậm
+
+  // ✅ Danh sách font chữ phong phú hơn
+  const fontOptions = [
+    // Sans-serif
+    { value: 'Arial', label: 'Arial', category: 'Sans-serif' },
+    { value: 'Helvetica', label: 'Helvetica', category: 'Sans-serif' },
+    { value: 'Verdana', label: 'Verdana', category: 'Sans-serif' },
+    { value: 'Tahoma', label: 'Tahoma', category: 'Sans-serif' },
+    { value: 'Trebuchet MS', label: 'Trebuchet MS', category: 'Sans-serif' },
+    { value: 'Calibri', label: 'Calibri', category: 'Sans-serif' },
+
+    // Serif
+    { value: 'Times New Roman', label: 'Times New Roman', category: 'Serif' },
+    { value: 'Georgia', label: 'Georgia', category: 'Serif' },
+    { value: 'Palatino', label: 'Palatino', category: 'Serif' },
+    { value: 'Garamond', label: 'Garamond', category: 'Serif' },
+    { value: 'Bookman', label: 'Bookman', category: 'Serif' },
+
+    // Monospace
+    { value: 'Courier New', label: 'Courier New', category: 'Monospace' },
+    { value: 'Lucida Console', label: 'Lucida Console', category: 'Monospace' },
+    { value: 'Monaco', label: 'Monaco', category: 'Monospace' },
+    { value: 'Consolas', label: 'Consolas', category: 'Monospace' },
+
+    // Display
+    { value: 'Comic Sans MS', label: 'Comic Sans MS', category: 'Display' },
+    { value: 'Impact', label: 'Impact', category: 'Display' },
+    { value: 'Brush Script MT', label: 'Brush Script MT', category: 'Display' },
+    { value: 'Copperplate', label: 'Copperplate', category: 'Display' },
+  ]
 
   // trạng thái sẵn sàng export
   const [ready, setReady] = useState(false)
@@ -469,7 +502,7 @@ export default function Editor() {
         {/* Preview */}
         <div className="flex justify-center">
           <Stage
-            key={alias}                 // remount khi đổi alias
+            key={alias}
             ref={stageRef}
             width={viewSize}
             height={viewSize}
@@ -511,11 +544,18 @@ export default function Editor() {
                   )
                 )}
 
+                {/* ✅ Overlay trước văn bản */}
+                {overlayUrl && <Overlay url={overlayUrl} size={viewSize} />}
+
+                {/* ✅ Văn bản SAU overlay để hiển thị trên cùng */}
                 {textMode && hasImage && (
                   <KText
                     text={text}
                     fontSize={textSize}
                     fill={textColor}
+                    fontFamily={textFont}
+                    fontStyle={textStyle}
+                    fontVariant={textWeight === 'bold' ? 'bold' : 'normal'}
                     x={0}
                     y={-viewSize * 0.18}
                     align="center"
@@ -524,8 +564,6 @@ export default function Editor() {
                     draggable
                   />
                 )}
-
-                {overlayUrl && <Overlay url={overlayUrl} size={viewSize} />}
               </Group>
             </Layer>
           </Stage>
@@ -572,7 +610,7 @@ export default function Editor() {
                 <button
                   onClick={() => setMaskCircle((v) => !v)}
                   className={`px-3 py-1.5 rounded-md text-sm ${maskCircle
-                    ? 'bg-sky-600 text-white'
+                    ? 'bg-indigo-600 text-white'
                     : 'bg-slate-100 hover:bg-slate-200'
                     }`}
                   title="Bật/Tắt mask tròn"
@@ -692,23 +730,79 @@ export default function Editor() {
             </div>
 
             {textMode && (
-              <div className="mt-4 grid sm:grid-cols-3 gap-3 text-sm">
+              <div className="mt-4 space-y-3">
+                {/* ✅ Input văn bản */}
                 <input
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="Nhập nội dung"
-                  className="sm:col-span-2 rounded-md border px-3 py-2 outline-none"
+                  placeholder="Nhập nội dung văn bản..."
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
                 />
-                <div className="flex items-center gap-2">
+
+                {/* ✅ Font chữ */}
+                <select
+                  value={textFont}
+                  onChange={(e) => setTextFont(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                  style={{ fontFamily: textFont }}
+                >
+                  {fontOptions.map((font) => (
+                    <option
+                      key={font.value}
+                      value={font.value}
+                      style={{ fontFamily: font.value }}
+                    >
+                      {font.label} ({font.category})
+                    </option>
+                  ))}
+                </select>
+
+                {/* ✅ Size + Kiểu chữ (Bold/Italic) */}
+                <div className="grid grid-cols-3 gap-3">
                   <input
-                    type="number" min={14} max={72} value={textSize}
+                    type="number"
+                    min={14}
+                    max={72}
+                    value={textSize}
                     onChange={(e) => setTextSize(+e.target.value)}
-                    className="w-24 rounded-md border px-2 py-2 outline-none"
+                    className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                    placeholder="Cỡ chữ"
                   />
+
+                  <button
+                    onClick={() => setTextWeight(w => w === 'bold' ? 'normal' : 'bold')}
+                    className={`rounded-lg border px-3 py-2.5 text-sm font-bold transition-all ${textWeight === 'bold'
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white border-gray-300 hover:border-indigo-400'
+                      }`}
+                    title="Chữ đậm"
+                  >
+                    B
+                  </button>
+
+                  <button
+                    onClick={() => setTextStyle(s => s === 'italic' ? 'normal' : 'italic')}
+                    className={`rounded-lg border px-3 py-2.5 text-sm italic transition-all ${textStyle === 'italic'
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white border-gray-300 hover:border-indigo-400'
+                      }`}
+                    title="Chữ nghiêng"
+                  >
+                    I
+                  </button>
+                </div>
+
+                {/* ✅ Color Picker */}
+                <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <label className="text-sm font-medium text-gray-700 min-w-fit">
+                    Màu chữ
+                  </label>
+
                   <input
-                    type="color" value={textColor}
+                    type="color"
+                    value={textColor}
                     onChange={(e) => setTextColor(e.target.value)}
-                    className="h-9 w-9 rounded-md border p-0"
+                    className="h-10 w-16 rounded-md border border-gray-300 cursor-pointer"
                   />
                 </div>
               </div>
