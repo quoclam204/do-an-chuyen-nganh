@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Shield, Chrome, Loader2, X } from 'lucide-react'
 import { authApi } from '../services/authApi'
 
-// ✅ Sử dụng import.meta.env cho Vite
+// ✅ Sử dụng import.meta.env cho Vitez
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_URL || 'https://localhost:7090').replace(/\/$/, '')
 const SPA_ORIGIN = (import.meta.env.VITE_SPA_ORIGIN || window.location.origin).replace(/\/$/, '')
 
