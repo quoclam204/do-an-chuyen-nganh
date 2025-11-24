@@ -186,7 +186,7 @@ export default function Home() {
 
   const tools = [
     { t: 'Nén ảnh', d: 'Giảm dung lượng ảnh dễ dàng', to: '/compress', icon: <Maximize2 className="w-6 h-6" /> },
-    { t: 'Thay đổi kích thướcc', d: 'Resize ảnh theo kích thước mong muốn', to: '/resize', icon: <Maximize2 className="w-6 h-6" /> },
+    { t: 'Thay đổi kích thước', d: 'Resize ảnh theo kích thước mong muốn', to: '/resize', icon: <Maximize2 className="w-6 h-6" /> },
     { t: 'Ảnh → PDF', d: 'Gộp nhiều ảnh thành một PDF', to: '/image-to-pdf', icon: <FileDown className="w-6 h-6" /> },
   ];
 
