@@ -9,6 +9,18 @@ import NotFound from '../components/NotFound'
 // ✅ Thêm BACKEND_ORIGIN
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 
+// ✅ Mapping loại khung
+const FRAME_TYPE_LABELS = {
+  'su_kien': 'Sự kiện',
+  'le_hoi': 'Lễ hội – Ngày đặc biệt',
+  'hoat_dong': 'Hoạt động – Cộng đồng',
+  'chien_dich': 'Chiến dịch – Cổ vũ',
+  'thuong_hieu': 'Thương hiệu – Tổ chức',
+  'giai_tri': 'Giải trí – Fandom',
+  'sang_tao': 'Chủ đề sáng tạo',
+  'khac': 'Khác'
+}
+
 const EXPORT_SIZE = 1080
 const PREVIEW_MAX = 500
 const PREVIEW_MIN = 300
@@ -458,9 +470,21 @@ export default function Editor() {
     <div className="max-w-2xl mx-auto px-4 py-8">
 
       {/* TIÊU ĐỀ KHUNG HÌNH THEO KHUNG ĐÃ TẠO*/}
-      <h1 className="text-3xl font-extrabold text-center mb-3">
+      <h1 className="text-3xl font-extrabold text-center mb-2">
         {frame?.name || alias}
       </h1>
+
+      {/* ✅ HIỂN THỊ LOẠI KHUNG */}
+      {frame?.type && (
+        <div className="text-center mb-4">
+          <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 rounded-full px-3 py-1 text-sm font-medium border border-indigo-200">
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+            </svg>
+            {FRAME_TYPE_LABELS[frame.type] || frame.type}
+          </span>
+        </div>
+      )}
 
       {/* ✅ HIỂN THỊ LƯỢT XEM VÀ LƯỢT TẢI - Kiểu badge đẹp hơn */}
       <div className="flex items-center justify-center gap-3 mb-5">

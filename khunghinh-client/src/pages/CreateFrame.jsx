@@ -13,13 +13,15 @@ export default function CreateFrame() {
 
     const [formData, setFormData] = useState({
         title: '',
-        url: URL_PREFIX
+        url: URL_PREFIX,
+        type: 'khac' // ✅ Loại khung mặc định
     })
     const [selectedFile, setSelectedFile] = useState(null)
     const [preview, setPreview] = useState(null)
     const [loadingSubmit, setLoading] = useState(false)
     const [errors, setErrors] = useState({})
     const [success, setSuccess] = useState(null) // ✅ trạng thái thông báo
+    const [frameTypes, setFrameTypes] = useState([]) // ✅ Danh sách loại khung
 
     // ✅ Auto ẩn thông báo sau 5 giây
     useEffect(() => {
@@ -27,6 +29,24 @@ export default function CreateFrame() {
         const t = setTimeout(() => setSuccess(null), 10000)
         return () => clearTimeout(t)
     }, [success])
+
+    // ✅ Lấy danh sách loại khung từ API
+    useEffect(() => {
+        const fetchFrameTypes = async () => {
+            try {
+                const res = await fetch(`${BACKEND_ORIGIN}/api/frames/types`, {
+                    credentials: 'include'
+                })
+                if (res.ok) {
+                    const data = await res.json()
+                    setFrameTypes(data)
+                }
+            } catch (error) {
+                console.error('Error fetching frame types:', error)
+            }
+        }
+        fetchFrameTypes()
+    }, [])
 
     // Tạo alias ngẫu nhiên
     const generateRandomAlias = () => {
@@ -132,6 +152,7 @@ export default function CreateFrame() {
             const submitData = new FormData()
             submitData.append('file', selectedFile)
             submitData.append('title', formData.title)
+            submitData.append('type', formData.type) // ✅ Thêm loại khung
 
             let alias = (formData.url || '').replace(URL_PREFIX, '').trim()
             if (!alias) {
@@ -360,6 +381,33 @@ export default function CreateFrame() {
                                         <Info size={14} /> {errors.title}
                                     </p>
                                 )}
+                            </div>
+
+                            {/* Loại khung */}
+                            <div>
+                                <label htmlFor="type" className="block text-sm font-medium text-gray-700">
+                                    Loại khung <span className="text-rose-500">*</span>
+                                </label>
+                                <select
+                                    id="type"
+                                    name="type"
+                                    value={formData.type}
+                                    onChange={handleInputChange}
+                                    className="mt-1 w-full px-4 py-3 rounded-xl border border-gray-300 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                >
+                                    {frameTypes.length > 0 ? (
+                                        frameTypes.map((type) => (
+                                            <option key={type.value} value={type.value}>
+                                                {type.label}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option value="khac">Khác</option>
+                                    )}
+                                </select>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Chọn loại phù hợp để người dùng dễ tìm thấy khung của bạn
+                                </p>
                             </div>
 
                             {/* URL */}

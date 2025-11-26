@@ -90,6 +90,9 @@ export async function getFrameByAliasFromAPI(alias) {
       overlay: (data.UrlXemTruoc || data.urlXemTruoc) ? `${BACKEND_ORIGIN}${data.UrlXemTruoc || data.urlXemTruoc}` : null,
       id: data.Id || data.id,
 
+      // ✅ Thêm loại khung
+      // type: data.Loai || data.loai || null,
+
       // Thêm owner và ngày tạo:
       owner: data.owner || data.Owner || null,
       ngayTao: data.NgayDang || data.ngayDang || null, // hoặc NgayDang nếu bạn dùng PascalCase
@@ -169,6 +172,7 @@ export async function getFrameByAlias(alias) {
       id: data.id ?? data.Id,
       name: data.tieuDe ?? data.TieuDe,
       alias: data.alias ?? data.Alias,
+      type: data.loai ?? data.Loai, // ✅ THÊM dòng này
       overlay: fullImageUrl,
       thumb: fullImageUrl,
       ngayTao: data.ngayDang ?? data.NgayDang,

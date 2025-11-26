@@ -23,7 +23,7 @@ namespace Khunghinh.Api.Controllers
 
         [HttpPost]
         [Authorize]
-        public async Task<IActionResult> Create([FromForm] IFormFile file, [FromForm] string title, [FromForm] string alias)
+        public async Task<IActionResult> Create([FromForm] IFormFile file, [FromForm] string title, [FromForm] string alias, [FromForm] string? type)
         {
             try
             {
@@ -36,7 +36,11 @@ namespace Khunghinh.Api.Controllers
                 if (file.Length > 2 * 1024 * 1024)
                     return BadRequest("File không được vượt quá 2MB");
 
-                // ✅ LUÔN có webroot + frames dir
+                // ✅ Validate loại khung
+                var validTypes = new[] { "su_kien", "le_hoi", "hoat_dong", "chien_dich", "thuong_hieu", "giai_tri", "sang_tao", "khac" };
+                if (!string.IsNullOrWhiteSpace(type) && !validTypes.Contains(type))
+                    return BadRequest("Loại khung không hợp lệ");
+
                 var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
                 var framesDir = Path.Combine(webRoot, "frames");
                 Directory.CreateDirectory(framesDir);
@@ -48,7 +52,6 @@ namespace Khunghinh.Api.Controllers
                     await file.CopyToAsync(stream);
                 }
 
-                // ✅ Lấy email claim robust
                 string? userEmail =
                     User.FindFirst(ClaimTypes.Email)?.Value ??
                     User.FindFirst("email")?.Value ??
@@ -62,7 +65,6 @@ namespace Khunghinh.Api.Controllers
                 if (user == null)
                     return Unauthorized("Người dùng không tồn tại");
 
-                // ✅ Kiểm tra alias trùng lặp (trả 409 cho rõ nghĩa)
                 if (!string.IsNullOrWhiteSpace(alias))
                 {
                     var exists = _db.KhungHinhs.Any(x => x.Alias == alias);
@@ -79,7 +81,7 @@ namespace Khunghinh.Api.Controllers
                     ChuSoHuuId = user.Id,
                     TieuDe = title,
                     Alias = alias,
-                    Loai = "khac",
+                    Loai = string.IsNullOrWhiteSpace(type) ? "khac" : type, // ✅ Dùng loại từ form
                     CheDoHienThi = "cong_khai",
                     TrangThai = "dang_hoat_dong",
                     UrlXemTruoc = $"/frames/{fileName}",
@@ -136,6 +138,8 @@ namespace Khunghinh.Api.Controllers
                     .Select(x => new {
                         x.Id,
                         x.TieuDe,
+                        x.Alias, // ✅ THÊM alias
+                        x.Loai, // ✅ THÊM loại khung
                         x.TrangThai,
                         x.LuotXem,
                         x.LuotTai,
@@ -204,10 +208,11 @@ namespace Khunghinh.Api.Controllers
                     x.Id,
                     x.TieuDe,
                     x.Alias,
+                    x.Loai, // ✅ THÊM loại khung
                     x.UrlXemTruoc,
-                    x.NgayDang, // ✅ Được serialize thành ngayDang
-                    x.LuotXem,  // ✅ Thêm
-                    x.LuotTai,  // ✅ Thêm
+                    x.NgayDang,
+                    x.LuotXem,
+                    x.LuotTai,
                     owner = x.ChuSoHuu == null ? null : new
                     {
                         id = x.ChuSoHuu.Id,
@@ -239,9 +244,10 @@ namespace Khunghinh.Api.Controllers
                         x.Id,
                         x.TieuDe,
                         x.Alias,
+                        x.Loai, // ✅ THÊM loại khung
                         x.UrlXemTruoc,
-                        NgayDang = x.NgayDang, // để serializer xuất ISO-8601
-                        isNew = (nowUtc - x.NgayDang).TotalHours <= 24, // ⭐ cờ NEW
+                        NgayDang = x.NgayDang,
+                        isNew = (nowUtc - x.NgayDang).TotalHours <= 24,
                         owner = x.ChuSoHuu == null ? null : new
                         {
                             id = x.ChuSoHuu.Id,
@@ -339,6 +345,7 @@ namespace Khunghinh.Api.Controllers
                     x.Id,
                     x.TieuDe,
                     x.Alias,
+                    x.Loai, // ✅ THÊM loại khung
                     x.UrlXemTruoc,
                     x.LuotXem,
                     x.LuotTai,
@@ -361,11 +368,10 @@ namespace Khunghinh.Api.Controllers
         // Sửa khung hình
         [HttpPost("update/{id:long}")]
         [Authorize]
-        public async Task<IActionResult> Update(long id, [FromForm] string? title, [FromForm] string? alias, [FromForm] IFormFile? file)
+        public async Task<IActionResult> Update(long id, [FromForm] string? title, [FromForm] string? alias, [FromForm] string? type, [FromForm] IFormFile? file)
         {
             try
             {
-                // Lấy email user từ claims
                 string? userEmail =
                     User.FindFirst(ClaimTypes.Email)?.Value ??
                     User.FindFirst("email")?.Value ??
@@ -374,7 +380,6 @@ namespace Khunghinh.Api.Controllers
                 var user = _db.NguoiDungs.FirstOrDefault(x => x.Email == userEmail);
                 if (user == null) return Unauthorized();
 
-                // Tìm khung hình thuộc về user
                 var frame = _db.KhungHinhs.FirstOrDefault(x => x.Id == id && x.ChuSoHuuId == user.Id);
                 if (frame == null) return NotFound("Không tìm thấy khung hình hoặc bạn không có quyền sửa.");
 
@@ -388,6 +393,15 @@ namespace Khunghinh.Api.Controllers
                     var exists = _db.KhungHinhs.Any(x => x.Alias == alias && x.Id != id);
                     if (exists) return Conflict("Alias đã tồn tại");
                     frame.Alias = alias;
+                }
+
+                // ✅ Sửa loại khung
+                if (!string.IsNullOrWhiteSpace(type))
+                {
+                    var validTypes = new[] { "su_kien", "le_hoi", "hoat_dong", "chien_dich", "thuong_hieu", "giai_tri", "sang_tao", "khac" };
+                    if (!validTypes.Contains(type))
+                        return BadRequest("Loại khung không hợp lệ");
+                    frame.Loai = type;
                 }
 
                 // Sửa ảnh (nếu có file mới)
@@ -421,7 +435,7 @@ namespace Khunghinh.Api.Controllers
                 }
 
                 var vietnamTime = TimeZoneInfo.ConvertTimeFromUtc(
-                    DateTime.UtcNow, 
+                    DateTime.UtcNow,
                     TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")
                 );
                 frame.NgayChinhSua = vietnamTime;
@@ -478,16 +492,11 @@ namespace Khunghinh.Api.Controllers
                             id = frame.Id,
                             name = frame.TieuDe,
                             alias = frame.Alias,
+                            loai = frame.Loai, // ✅ THÊM loại khung
                             thumb = frame.UrlXemTruoc,
-
-                            // ✅ Trả về tổng lượt xem/tải
                             luotXem = frame.LuotXem,
                             luotTai = frame.LuotTai,
-
-                            // ✅ THÊM TRƯỜNG NGÀY TẠO
                             ngayTao = frame.NgayDang,
-
-                            // Giữ lại data 24h cho ranking
                             views24h = t.Views24h,
                             downloads24h = t.Downloads24h,
                             percent = total > 0 ? Math.Round((double)t.Downloads24h / total * 100, 1) : 0,
@@ -511,5 +520,23 @@ namespace Khunghinh.Api.Controllers
             }
         }
 
+        // Lấy danh sách loại khung
+        [HttpGet("types")]
+        [AllowAnonymous]
+        public IActionResult GetFrameTypes()
+        {
+            var types = new[]
+            {
+                new { value = "su_kien", label = "Sự kiện", icon = "calendar" },
+                new { value = "le_hoi", label = "Lễ hội – Ngày đặc biệt", icon = "party" },
+                new { value = "hoat_dong", label = "Hoạt động – Cộng đồng", icon = "people" },
+                new { value = "chien_dich", label = "Chiến dịch – Cổ vũ", icon = "flag" },
+                new { value = "thuong_hieu", label = "Thương hiệu – Tổ chức", icon = "business" },
+                new { value = "giai_tri", label = "Giải trí – Fandom", icon = "star" },
+                new { value = "sang_tao", label = "Chủ đề sáng tạo", icon = "brush" },
+                new { value = "khac", label = "Khác", icon = "more" }
+            };
+            return Ok(types);
+        }
     }
 }
