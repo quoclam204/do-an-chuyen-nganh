@@ -5,6 +5,18 @@ import { Eye } from 'lucide-react'
 // ✅ Đổi từ VITE_API_URL sang VITE_API_ORIGIN
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 
+// ✅ Mapping loại khung
+const FRAME_TYPE_LABELS = {
+  'su_kien': 'Sự kiện',
+  'le_hoi': 'Lễ hội – Ngày đặc biệt',
+  'hoat_dong': 'Hoạt động – Cộng đồng',
+  'chien_dich': 'Chiến dịch – Cổ vũ',
+  'thuong_hieu': 'Thương hiệu – Tổ chức',
+  'giai_tri': 'Giải trí – Fandom',
+  'sang_tao': 'Chủ đề sáng tạo',
+  'khac': 'Khác'
+}
+
 function RankBadge({ rank }) {
   const getColor = () => {
     if (rank === 1) return 'bg-yellow-400 text-white'
@@ -54,6 +66,7 @@ export default function Trending() {
             rank: item.rank || 0,
             name: item.name || item.tieuDe || item.TieuDe || 'Không có tên',
             alias: item.alias || item.Alias,
+            loai: item.loai || item.Loai || null, // ✅ Thêm loại khung
             thumb: imageUrl,
             overlay: imageUrl,
             totalViews: item.luotXem || item.LuotXem || 0,
@@ -137,6 +150,18 @@ export default function Trending() {
               {top1.name}
             </h2>
 
+            {/* ✅ Loại khung cho Top 1 - dưới tên */}
+            {top1.loai && (
+              <div className="mt-2">
+                <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 rounded-full px-3 py-1 text-sm font-medium border border-indigo-200">
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                  </svg>
+                  {FRAME_TYPE_LABELS[top1.loai] || top1.loai}
+                </span>
+              </div>
+            )}
+
             {/* Stats - lượt xem */}
             <div className="mt-3 flex items-center gap-2 text-gray-500">
               <Eye size={18} />
@@ -170,15 +195,31 @@ export default function Trending() {
 
                   {/* Right: Info */}
                   <div className="flex-1 min-w-0 py-1">
-                    {/* Title */}
-                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition line-clamp-2 mb-2">
-                      {item.name}
-                    </h3>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        {/* Title */}
+                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition line-clamp-2 mb-2">
+                          {item.name}
+                        </h3>
 
-                    {/* Stats - lượt xem */}
-                    <div className="flex items-center gap-2 text-gray-500 text-sm">
-                      <Eye size={16} />
-                      <span className="font-medium">{item.totalViews.toLocaleString()}</span>
+                        {/* Stats - lượt xem */}
+                        <div className="flex items-center gap-2 text-gray-500 text-sm">
+                          <Eye size={16} />
+                          <span className="font-medium">{item.totalViews.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* ✅ Loại khung cho các khung còn lại - bên phải */}
+                      {item.loai && (
+                        <div className="flex-shrink-0">
+                          <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 rounded-full px-2.5 py-1 text-xs font-medium border border-indigo-200">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                            </svg>
+                            {FRAME_TYPE_LABELS[item.loai] || item.loai}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
