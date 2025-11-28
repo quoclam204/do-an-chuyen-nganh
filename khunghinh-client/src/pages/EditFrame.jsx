@@ -4,6 +4,7 @@ import { ArrowLeft, Upload, Loader2, AlertCircle, CheckCircle, X } from 'lucide-
 
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 
+
 export default function EditFrame() {
     const { id } = useParams()
     const navigate = useNavigate()
@@ -13,17 +14,35 @@ export default function EditFrame() {
     const [frame, setFrame] = useState(null)
     const [formData, setFormData] = useState({
         title: '',
-        alias: ''
+        alias: '',
+        type: 'khac', // Thêm loại khung mặc định
     })
     const [file, setFile] = useState(null)
     const [preview, setPreview] = useState('')
     const [aliasStatus, setAliasStatus] = useState({ checking: false, available: true, message: '' })
     const [errors, setErrors] = useState({})
     const [notification, setNotification] = useState({ show: false, type: '', message: '' })
+    const [frameTypes, setFrameTypes] = useState([]) // Danh sách loại khung
+
 
     useEffect(() => {
         fetchFrameDetail()
+        fetchFrameTypes()
     }, [id])
+
+    // Lấy danh sách loại khung từ API
+    async function fetchFrameTypes() {
+        try {
+            const res = await fetch(`${BACKEND_ORIGIN}/api/frames/types`, { credentials: 'include' })
+            if (res.ok) {
+                const data = await res.json()
+                setFrameTypes(data)
+            }
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error('Error fetching frame types:', error)
+        }
+    }
 
     // Auto-check alias when typing (debounced)
     useEffect(() => {
@@ -54,7 +73,8 @@ export default function EditFrame() {
             setFrame(data)
             setFormData({
                 title: data.tieuDe || data.TieuDe || '',
-                alias: data.alias || data.Alias || ''
+                alias: data.alias || data.Alias || '',
+                type: data.loai || data.Loai || data.type || data.Type || 'khac',
             })
             setPreview(data.urlXemTruoc || data.UrlXemTruoc || '')
         } catch (error) {
@@ -164,6 +184,7 @@ export default function EditFrame() {
             if (formData.alias) {
                 formDataToSend.append('alias', formData.alias.trim())
             }
+            formDataToSend.append('type', formData.type) // Thêm loại khung
             if (file) {
                 formDataToSend.append('file', file)
             }
@@ -333,6 +354,34 @@ export default function EditFrame() {
 
                             <p className="mt-1 text-xs text-gray-500">
                                 Alias giúp tạo URL thân thiện. Chỉ sử dụng chữ thường, số và dấu gạch ngang.
+                            </p>
+                        </div>
+
+
+                        {/* Loại khung */}
+                        <div>
+                            <label htmlFor="type" className="block text-sm font-medium text-gray-700">
+                                Loại khung <span className="text-rose-500">*</span>
+                            </label>
+                            <select
+                                id="type"
+                                name="type"
+                                value={formData.type}
+                                onChange={handleInputChange}
+                                className="mt-1 w-full px-4 py-3 rounded-xl border border-gray-300 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                            >
+                                {frameTypes.length > 0 ? (
+                                    frameTypes.map((type) => (
+                                        <option key={type.value} value={type.value}>
+                                            {type.label}
+                                        </option>
+                                    ))
+                                ) : (
+                                    <option value="khac">Khác</option>
+                                )}
+                            </select>
+                            <p className="mt-1 text-xs text-gray-500">
+                                Chọn loại phù hợp để người dùng dễ tìm thấy khung của bạn
                             </p>
                         </div>
 

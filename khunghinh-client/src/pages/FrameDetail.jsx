@@ -4,10 +4,23 @@ import { ArrowLeft, Download, Share2, Eye, Calendar, User, Loader2, Heart, Copy,
 
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 
+
 const STATUS_META = {
     'dang_hoat_dong': { label: 'Đang hoạt động', chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200', dot: 'bg-emerald-500' },
     'tam_dung': { label: 'Tạm dừng', chip: 'bg-slate-50 text-slate-700 ring-slate-200', dot: 'bg-slate-400' },
     'cho_duyet': { label: 'Chờ duyệt', chip: 'bg-amber-50 text-amber-700 ring-amber-200', dot: 'bg-amber-500' }
+}
+
+// Mapping loại khung
+const FRAME_TYPE_LABELS = {
+    'su_kien': 'Sự kiện',
+    'le_hoi': 'Lễ hội – Ngày đặc biệt',
+    'hoat_dong': 'Hoạt động – Cộng đồng',
+    'chien_dich': 'Chiến dịch – Cổ vũ',
+    'thuong_hieu': 'Thương hiệu – Tổ chức',
+    'giai_tri': 'Giải trí – Fandom',
+    'sang_tao': 'Chủ đề sáng tạo',
+    'khac': 'Khác'
 }
 
 const formatDate = (d) => {
@@ -81,6 +94,7 @@ export default function FrameDetail() {
             console.log('✅ Frame detail API response:', data)
 
             // ✅ Map dữ liệu (hỗ trợ cả PascalCase và camelCase)
+
             const mappedFrame = {
                 id: data.id ?? data.Id,
                 title: data.tieuDe ?? data.TieuDe ?? 'Không có tiêu đề',
@@ -91,6 +105,7 @@ export default function FrameDetail() {
                 createdAt: data.ngayDang ?? data.NgayDang,
                 imageUrl: data.urlXemTruoc ?? data.UrlXemTruoc ? withBackendOrigin(data.urlXemTruoc ?? data.UrlXemTruoc) : '/placeholder-frame.png',
                 downloadUrl: data.urlXemTruoc ?? data.UrlXemTruoc ? withBackendOrigin(data.urlXemTruoc ?? data.UrlXemTruoc) : null,
+                type: data.loai ?? data.Loai ?? data.type ?? data.Type ?? null, // Thêm loại khung
                 owner: data.owner ? {
                     id: data.owner.id ?? data.owner.Id,
                     name: data.owner.name ?? data.owner.Name ?? 'Ẩn danh',
@@ -371,6 +386,17 @@ export default function FrameDetail() {
                                     <span className="font-medium">Ngày tạo:</span>
                                     <span>{formatDate(frame.createdAt)}</span>
                                 </div>
+                                {frame.type && (
+                                    <div className="flex items-center gap-2 text-gray-600">
+                                        <span className="font-medium">Loại khung:</span>
+                                        <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 rounded-full px-2.5 py-1 text-xs font-medium border border-indigo-200">
+                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                            </svg>
+                                            {FRAME_TYPE_LABELS[frame.type] || frame.type}
+                                        </span>
+                                    </div>
+                                )}
                                 {frame.alias && (
                                     <div className="flex items-center gap-2 text-gray-600">
                                         <span className="font-medium">Alias:</span>

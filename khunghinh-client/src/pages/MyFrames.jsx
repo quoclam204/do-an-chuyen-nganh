@@ -9,6 +9,18 @@ const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:70
 const getAvatarUrl = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=0D8ABC&color=fff&size=128&bold=true`
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString('vi-VN') : '-')
 
+// ✅ Mapping loại khung
+const FRAME_TYPE_LABELS = {
+    'su_kien': 'Sự kiện',
+    'le_hoi': 'Lễ hội – Ngày đặc biệt',
+    'hoat_dong': 'Hoạt động – Cộng đồng',
+    'chien_dich': 'Chiến dịch – Cổ vũ',
+    'thuong_hieu': 'Thương hiệu – Tổ chức',
+    'giai_tri': 'Giải trí – Fandom',
+    'sang_tao': 'Chủ đề sáng tạo',
+    'khac': 'Khác'
+}
+
 const STATUS_META = {
     active: { label: 'Đang hoạt động', chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200', dot: 'bg-emerald-500' },
     inactive: { label: 'Tạm dừng', chip: 'bg-slate-50 text-slate-700 ring-slate-200', dot: 'bg-slate-400' },
@@ -64,6 +76,7 @@ export default function MyFrames() {
     const [me, setMe] = useState(null)
     const [query, setQuery] = useState('')
     const [status, setStatus] = useState('all')            // all | active | inactive | pending
+    const [frameType, setFrameType] = useState('all')      // ✅ all | su_kien | le_hoi | ...
     const [sortKey, setSortKey] = useState('updatedAt')    // title | clicks | uses | createdAt | updatedAt
     const [sortDir, setSortDir] = useState('desc')         // asc | desc
     const [askDelete, setAskDelete] = useState({ open: false, id: null })
@@ -138,6 +151,8 @@ export default function MyFrames() {
             const mapped = (apiData || []).map(x => ({
                 id: x.id ?? x.Id,
                 title: x.tieuDe ?? x.TieuDe ?? '(không có tiêu đề)',
+                alias: x.alias ?? x.Alias, // ✅ Thêm alias
+                loai: x.loai ?? x.Loai ?? null, // ✅ Thêm loại khung
                 status: mapStatus(x.trangThai ?? x.TrangThai),
                 clicks: x.luotXem ?? x.LuotXem ?? 0,
                 uses: x.luotTai ?? x.LuotTai ?? 0,
@@ -194,7 +209,8 @@ export default function MyFrames() {
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase()
         const byStatus = status === 'all' ? frames : frames.filter(f => (f.status || 'active') === status)
-        const byText = q ? byStatus.filter(f => `${f.title}`.toLowerCase().includes(q)) : byStatus
+        const byType = frameType === 'all' ? byStatus : byStatus.filter(f => f.loai === frameType) // ✅ Filter loại khung
+        const byText = q ? byType.filter(f => `${f.title}`.toLowerCase().includes(q)) : byType
 
         const sorted = [...byText].sort((a, b) => {
             const dir = sortDir === 'asc' ? 1 : -1
@@ -209,7 +225,7 @@ export default function MyFrames() {
         })
 
         return sorted
-    }, [frames, query, status, sortKey, sortDir])
+    }, [frames, query, status, frameType, sortKey, sortDir]) // ✅ Thêm frameType
 
     const toggleSort = (key) => {
         if (key === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -276,6 +292,20 @@ export default function MyFrames() {
                             </select>
                             <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                         </div>
+                        {/* ✅ Filter loại khung */}
+                        <div className="relative">
+                            <select
+                                value={frameType}
+                                onChange={(e) => setFrameType(e.target.value)}
+                                className="appearance-none rounded-xl border border-slate-200 bg-white pl-3 pr-8 py-2 text-sm outline-none focus:border-blue-400"
+                            >
+                                <option value="all">Tất cả loại khung</option>
+                                {Object.entries(FRAME_TYPE_LABELS).map(([value, label]) => (
+                                    <option key={value} value={value}>{label}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        </div>
                     </div>
 
                     <Link
@@ -290,11 +320,12 @@ export default function MyFrames() {
                 <section className="min-w-0">
                     <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm">
                         <div className="max-w-full overflow-x-auto">
-                            <table className="min-w-[1040px] w-full text-sm">
+                            <table className="min-w-[1200px] w-full text-sm">
                                 <colgroup>
                                     <col className="w-14" />
                                     <col className="w-28" />
                                     <col />
+                                    <col className="w-40" /> {/* ✅ Loại khung */}
                                     <col className="w-44" />
                                     <col className="w-28" />
                                     <col className="w-32" />
@@ -312,6 +343,7 @@ export default function MyFrames() {
                                                 Tiêu đề{sortKey === 'title' && (<span className="text-xs">{sortDir === 'asc' ? '▲' : '▼'}</span>)}
                                             </button>
                                         </th>
+                                        <th className="text-left">Loại khung</th>
                                         <th className="text-left">Trạng thái</th>
                                         <th className="text-right">
                                             <button onClick={() => toggleSort('clicks')} className="inline-flex items-center gap-1 font-semibold">
@@ -342,7 +374,7 @@ export default function MyFrames() {
 
                                     {!loading && filtered.length === 0 && (
                                         <tr>
-                                            <td colSpan={9} className="py-16 text-center">
+                                            <td colSpan={10} className="py-16 text-center">
                                                 <div className="inline-flex flex-col items-center gap-2 text-slate-500">
                                                     <div className="text-5xl">📷</div>
                                                     <div className="text-lg">Chưa có khung hình phù hợp</div>
@@ -378,6 +410,20 @@ export default function MyFrames() {
                                                 <Link to={`/frame/${f.id}?preview=true`} className="line-clamp-1 font-medium text-gray-900 hover:text-blue-700" title={f.title}>
                                                     {f.title || 'Không có tiêu đề'}
                                                 </Link>
+                                            </td>
+
+                                            {/* ✅ Loại khung */}
+                                            <td className="py-3 px-3">
+                                                {f.loai ? (
+                                                    <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 rounded-full px-2.5 py-1 text-xs font-medium border border-indigo-200">
+                                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                                        </svg>
+                                                        {FRAME_TYPE_LABELS[f.loai] || f.loai}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-slate-400 text-xs">-</span>
+                                                )}
                                             </td>
 
                                             <td className="py-3 px-3"><StatusBadge status={f.status} /></td>
