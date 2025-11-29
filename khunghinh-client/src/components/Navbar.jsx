@@ -302,7 +302,7 @@ export default function Navbar() {
 
                     {/* Menu Items */}
                     <Link
-                      to="/profile"
+                      to="/account"
                       className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
                       onClick={() => setDropdownOpen(false)}
                     >
@@ -472,7 +472,7 @@ export default function Navbar() {
                   </button>
                 </div>
 
-                <Link to="/profile" onClick={() => setOpen(false)} className="flex items-center gap-3 text-gray-700 py-2">
+                <Link to="/account" onClick={() => setOpen(false)} className="flex items-center gap-3 text-gray-700 py-2">
                   <User size={16} />
                   <span>Tài khoản</span>
                 </Link>

@@ -17,6 +17,7 @@ import FrameDetail from './pages/FrameDetail'
 import MyFrames from './pages/MyFrames'
 import NotFound from './components/NotFound'
 import EditFrame from './pages/EditFrame'
+import Account from './pages/Account.jsx'
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/my-frames" element={<MyFrames />} />
             <Route path="/frame/:id" element={<FrameDetail />} />
             <Route path="/frame/:id/edit" element={<EditFrame />} />
+            <Route path="/account" element={<Account />} />
             <Route path="/:alias" element={<Editor />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
