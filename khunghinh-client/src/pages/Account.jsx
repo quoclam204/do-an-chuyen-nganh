@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
+import useRequireAuth from '../hooks/useRequireAuth';
 
 const Account = () => {
+    const { user: authUser, loading: authLoading } = useRequireAuth();
     const [user, setUser] = useState(null);
     const [displayName, setDisplayName] = useState('');
     const [avatar, setAvatar] = useState('');
@@ -11,8 +13,10 @@ const Account = () => {
     const fileInputRef = useRef();
 
     useEffect(() => {
-        fetchUser();
-    }, []);
+        if (authUser) {
+            fetchUser();
+        }
+    }, [authUser]);
 
     const fetchUser = async () => {
         try {
@@ -76,7 +80,21 @@ const Account = () => {
         if (fileInputRef.current) fileInputRef.current.click();
     };
 
-    if (!user) return <div>Đang tải thông tin tài khoản...</div>;
+    if (authLoading) {
+        return (
+            <div className="min-h-screen grid place-items-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div className="min-h-screen grid place-items-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+            </div>
+        );
+    }
 
     const handleCancel = () => {
         setDisplayName(user.TenHienThi || user.tenHienThi || '');

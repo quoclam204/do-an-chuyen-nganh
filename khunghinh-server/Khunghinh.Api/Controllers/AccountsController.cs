@@ -96,7 +96,7 @@ namespace Khunghinh.Api.Controllers
         {
             try
             {
-                if (file == null || file.Length == 0)
+                if (file == null || file.Length == 0)   
                     return BadRequest("Chưa chọn file");
 
                 // Cho phép png hoặc jpg/jpeg
