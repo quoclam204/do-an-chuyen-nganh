@@ -96,21 +96,33 @@ namespace Khunghinh.Api.Controllers
         {
             try
             {
-                if (file == null || file.Length == 0)   
+                if (file == null || file.Length == 0)
                     return BadRequest("Chưa chọn file");
 
-                // Cho phép png hoặc jpg/jpeg
-                var allowedContentTypes = new[] { "image/png", "image/jpeg", "image/jpg" };
-                if (!allowedContentTypes.Contains(file.ContentType) &&
-                    !(file.FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
-                      || file.FileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
-                      || file.FileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)))
-                {
-                    return BadRequest("Chỉ chấp nhận file PNG/JPG");
-                }
-
+                // 1. Validate file size
                 if (file.Length > 2 * 1024 * 1024)
                     return BadRequest("File không được vượt quá 2MB");
+
+                // 2. Validate MIME type bằng magic bytes (an toàn hơn)
+                var allowedExtensions = new[] { ".png", ".jpg", ".jpeg" };
+                var ext = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+                if (string.IsNullOrEmpty(ext) || !allowedExtensions.Contains(ext))
+                    return BadRequest("Chỉ chấp nhận file PNG/JPG");
+
+                // 3. Kiểm tra magic bytes để chắc chắn là ảnh thật
+                using (var stream = file.OpenReadStream())
+                {
+                    var header = new byte[8];
+                    await stream.ReadAsync(header, 0, header.Length);
+
+                    // PNG: 89 50 4E 47 0D 0A 1A 0A
+                    // JPEG: FF D8 FF
+                    bool isPng = header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47;
+                    bool isJpeg = header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF;
+
+                    if (!isPng && !isJpeg)
+                        return BadRequest("File không phải là ảnh hợp lệ");
+                }
 
                 string? email =
                     User.FindFirst(ClaimTypes.Email)?.Value ??
@@ -124,35 +136,40 @@ namespace Khunghinh.Api.Controllers
                 var avatarsDir = Path.Combine(webRoot, "avatars");
                 Directory.CreateDirectory(avatarsDir);
 
-                var ext = Path.GetExtension(file.FileName);
-                if (string.IsNullOrWhiteSpace(ext))
-                    ext = file.ContentType == "image/png" ? ".png" : ".jpg";
+                // 4. Tạo tên file an toàn
+                var safeFileName = $"{Guid.NewGuid()}{ext}";
+                var path = Path.Combine(avatarsDir, safeFileName);
 
-                var fileName = $"{Guid.NewGuid()}{ext}";
-                var path = Path.Combine(avatarsDir, fileName);
                 using (var stream = System.IO.File.Create(path))
                 {
                     await file.CopyToAsync(stream);
                 }
 
-                // Xóa ảnh cũ nếu có và nằm trong thư mục wwwroot
+                // 5. Xóa ảnh cũ an toàn (chống Path Traversal)
                 if (!string.IsNullOrWhiteSpace(user.AnhDaiDienUrl))
                 {
                     try
                     {
-                        var oldPath = user.AnhDaiDienUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-                        var fullOld = Path.Combine(webRoot, oldPath);
-                        if (System.IO.File.Exists(fullOld))
-                            System.IO.File.Delete(fullOld);
+                        // Chỉ xóa nếu file nằm trong thư mục avatars
+                        var oldFileName = Path.GetFileName(user.AnhDaiDienUrl);
+                        if (!string.IsNullOrEmpty(oldFileName))
+                        {
+                            var fullOld = Path.Combine(avatarsDir, oldFileName);
+                            // Đảm bảo file nằm trong avatarsDir (chống path traversal)
+                            var canonicalPath = Path.GetFullPath(fullOld);
+                            var canonicalDir = Path.GetFullPath(avatarsDir);
+
+                            if (canonicalPath.StartsWith(canonicalDir) && System.IO.File.Exists(fullOld))
+                                System.IO.File.Delete(fullOld);
+                        }
                     }
                     catch (Exception ex)
                     {
-                        // Không block thao tác chính nếu xóa file cũ thất bại
                         Console.WriteLine($"Failed to delete old avatar: {ex.Message}");
                     }
                 }
 
-                user.AnhDaiDienUrl = $"/avatars/{fileName}";
+                user.AnhDaiDienUrl = $"/avatars/{safeFileName}";
                 await _db.SaveChangesAsync();
 
                 return Ok(new { success = true, avatar = user.AnhDaiDienUrl });
@@ -160,7 +177,7 @@ namespace Khunghinh.Api.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"[Accounts.UpdateAvatar] ERROR: {ex}");
-                return StatusCode(500, $"Lỗi server: {ex.Message}");
+                return StatusCode(500, "Lỗi server");
             }
         }
 

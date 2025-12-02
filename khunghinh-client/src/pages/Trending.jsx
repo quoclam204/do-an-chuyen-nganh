@@ -95,7 +95,7 @@ export default function Trending() {
   const rest = data.slice(1)
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white">
       <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-center gap-3 mb-12">

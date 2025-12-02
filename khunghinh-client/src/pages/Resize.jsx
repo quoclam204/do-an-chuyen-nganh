@@ -154,7 +154,7 @@ export default function Resize() {
   }, [tapTin, kichThuocMucTieu])
 
   return (
-    <div className="relative min-h-[80vh] bg-white">
+    <div className="relative min-h-[80vh] bg-gradient-to-b from-sky-50 to-white">
       <div className="relative z-10 max-w-6xl mx-auto px-6 py-10">
         <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 text-center mb-6">
           Thay đổi kích thước ảnh

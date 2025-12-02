@@ -82,8 +82,8 @@ export default function Compress() {
   }, 0)
 
   return (
-    // NỀN TRẮNG
-    <div className="min-h-[calc(100vh-64px)] bg-white">
+    // NỀN GRADIENT XANH NHẠT
+    <div className="min-h-[calc(100vh-64px)] bg-gradient-to-b from-sky-50 to-white">
       <div className="max-w-6xl mx-auto px-6 py-10">
 
         {/* Title */}

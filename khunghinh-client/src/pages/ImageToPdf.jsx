@@ -163,124 +163,126 @@ export default function ImageToPdf() {
   }, [])
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10">
-      <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 text-center">Ảnh → PDF</h1>
-      <p className="text-center text-gray-600 mt-2">
-        Gộp nhiều ảnh thành một file PDF, chọn khổ giấy, lề và cách hiển thị.
-      </p>
+    <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white">
+      <div className="max-w-6xl mx-auto px-6 py-10">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 text-center">Ảnh → PDF</h1>
+        <p className="text-center text-gray-600 mt-2">
+          Gộp nhiều ảnh thành một file PDF, chọn khổ giấy, lề và cách hiển thị.
+        </p>
 
-      {/* Bộ chọn file + đổi tên */}
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          onClick={openPicker}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:bg-blue-400"
-        >
-          <Upload size={18} /> {loading ? "Đang tải..." : "Chọn ảnh"}
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onPick} />
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-700">Tên file</span>
-          <input
-            value={fileName}
-            onChange={(e) => setFileName(e.target.value)}
-            className="border rounded-lg px-3 py-2 w-[260px]"
-            placeholder="ten-file.pdf"
-          />
-        </div>
-      </div>
-
-      {/* Danh sách ảnh */}
-      {items.length > 0 && (
-        <div className="mt-6 grid md:grid-cols-[1fr_360px] gap-8">
-          <div>
-            <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {items.map((it, i) => (
-                <li key={i} className="rounded-xl border bg-white shadow p-3">
-                  <div className="aspect-[4/3] bg-gray-50 rounded-lg grid place-items-center overflow-hidden">
-                    <img src={it.url} alt={it.name} className="max-w-full max-h-full object-contain" />
-                  </div>
-                  <div className="mt-2 text-xs text-gray-600 truncate">{it.name}</div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      onClick={() => move(i, -1)}
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border hover:bg-gray-50"
-                      title="Lên"
-                      disabled={i === 0}
-                    >
-                      <ArrowUp size={16} />
-                    </button>
-                    <button
-                      onClick={() => move(i, +1)}
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border hover:bg-gray-50"
-                      title="Xuống"
-                      disabled={i === items.length - 1}
-                    >
-                      <ArrowDown size={16} />
-                    </button>
-                    <button
-                      onClick={() => removeAt(i)}
-                      className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-md border hover:bg-red-50 text-red-600"
-                      title="Xoá"
-                    >
-                      <Trash size={16} />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+        {/* Bộ chọn file + đổi tên */}
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <button
+            onClick={openPicker}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:bg-blue-400"
+          >
+            <Upload size={18} /> {loading ? "Đang tải..." : "Chọn ảnh"}
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onPick} />
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-700">Tên file</span>
+            <input
+              value={fileName}
+              onChange={(e) => setFileName(e.target.value)}
+              className="border rounded-lg px-3 py-2 w-[260px]"
+              placeholder="ten-file.pdf"
+            />
           </div>
+        </div>
 
-          {/* Tuỳ chọn xuất */}
-          <aside className="rounded-2xl border bg-white shadow p-5 h-fit">
-            <div className="font-semibold text-lg">Tuỳ chọn PDF</div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <label className="text-sm">
-                <div className="text-gray-700 mb-1">Khổ giấy</div>
-                <select className="border rounded-lg px-3 py-2 w-full" value={pageSize} onChange={e => setPageSize(e.target.value)}>
-                  <option value="a4">A4 (210×297mm)</option>
-                  <option value="letter">Letter (216×279mm)</option>
-                </select>
-              </label>
-
-              <label className="text-sm">
-                <div className="text-gray-700 mb-1">Chiều giấy</div>
-                <select className="border rounded-lg px-3 py-2 w-full" value={orientation} onChange={e => setOrientation(e.target.value)}>
-                  <option value="p">Dọc (Portrait)</option>
-                  <option value="l">Ngang (Landscape)</option>
-                </select>
-              </label>
-
-              <label className="text-sm">
-                <div className="text-gray-700 mb-1">Lề (mm)</div>
-                <input
-                  type="number" min={0} max={50}
-                  className="border rounded-lg px-3 py-2 w-full"
-                  value={margin}
-                  onChange={e => setMargin(Math.max(0, Math.min(50, +e.target.value || 0)))}
-                />
-              </label>
-
-              <label className="text-sm">
-                <div className="text-gray-700 mb-1">Cách hiển thị</div>
-                <select className="border rounded-lg px-3 py-2 w-full" value={fitMode} onChange={e => setFitMode(e.target.value)}>
-                  <option value="contain">Vừa khung (có viền trắng)</option>
-                  <option value="cover">Đầy trang (cắt bớt nếu cần)</option>
-                </select>
-              </label>
+        {/* Danh sách ảnh */}
+        {items.length > 0 && (
+          <div className="mt-6 grid md:grid-cols-[1fr_360px] gap-8">
+            <div>
+              <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {items.map((it, i) => (
+                  <li key={i} className="rounded-xl border bg-white shadow p-3">
+                    <div className="aspect-[4/3] bg-gray-50 rounded-lg grid place-items-center overflow-hidden">
+                      <img src={it.url} alt={it.name} className="max-w-full max-h-full object-contain" />
+                    </div>
+                    <div className="mt-2 text-xs text-gray-600 truncate">{it.name}</div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        onClick={() => move(i, -1)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-md border hover:bg-gray-50"
+                        title="Lên"
+                        disabled={i === 0}
+                      >
+                        <ArrowUp size={16} />
+                      </button>
+                      <button
+                        onClick={() => move(i, +1)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-md border hover:bg-gray-50"
+                        title="Xuống"
+                        disabled={i === items.length - 1}
+                      >
+                        <ArrowDown size={16} />
+                      </button>
+                      <button
+                        onClick={() => removeAt(i)}
+                        className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-md border hover:bg-red-50 text-red-600"
+                        title="Xoá"
+                      >
+                        <Trash size={16} />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <button
-              onClick={onMakePdf}
-              disabled={!items.length || busy}
-              className={`mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white ${(!items.length || busy) ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
-            >
-              <FileDown size={18} /> {busy ? "Đang tạo PDF…" : "Tạo & Tải về"}
-            </button>
-          </aside>
-        </div>
-      )}
+            {/* Tuỳ chọn xuất */}
+            <aside className="rounded-2xl border bg-white shadow p-5 h-fit">
+              <div className="font-semibold text-lg">Tuỳ chọn PDF</div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <label className="text-sm">
+                  <div className="text-gray-700 mb-1">Khổ giấy</div>
+                  <select className="border rounded-lg px-3 py-2 w-full" value={pageSize} onChange={e => setPageSize(e.target.value)}>
+                    <option value="a4">A4 (210×297mm)</option>
+                    <option value="letter">Letter (216×279mm)</option>
+                  </select>
+                </label>
+
+                <label className="text-sm">
+                  <div className="text-gray-700 mb-1">Chiều giấy</div>
+                  <select className="border rounded-lg px-3 py-2 w-full" value={orientation} onChange={e => setOrientation(e.target.value)}>
+                    <option value="p">Dọc (Portrait)</option>
+                    <option value="l">Ngang (Landscape)</option>
+                  </select>
+                </label>
+
+                <label className="text-sm">
+                  <div className="text-gray-700 mb-1">Lề (mm)</div>
+                  <input
+                    type="number" min={0} max={50}
+                    className="border rounded-lg px-3 py-2 w-full"
+                    value={margin}
+                    onChange={e => setMargin(Math.max(0, Math.min(50, +e.target.value || 0)))}
+                  />
+                </label>
+
+                <label className="text-sm">
+                  <div className="text-gray-700 mb-1">Cách hiển thị</div>
+                  <select className="border rounded-lg px-3 py-2 w-full" value={fitMode} onChange={e => setFitMode(e.target.value)}>
+                    <option value="contain">Vừa khung (có viền trắng)</option>
+                    <option value="cover">Đầy trang (cắt bớt nếu cần)</option>
+                  </select>
+                </label>
+              </div>
+
+              <button
+                onClick={onMakePdf}
+                disabled={!items.length || busy}
+                className={`mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white ${(!items.length || busy) ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+              >
+                <FileDown size={18} /> {busy ? "Đang tạo PDF…" : "Tạo & Tải về"}
+              </button>
+            </aside>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
