@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
 import useRequireAuth from '../hooks/useRequireAuth';
+import { accountApi } from '../services/accountApi';
 
 const Account = () => {
     const { user: authUser, loading: authLoading } = useRequireAuth();
     const [user, setUser] = useState(null);
     const [displayName, setDisplayName] = useState('');
-    const [avatar, setAvatar] = useState('');
     const [avatarFile, setAvatarFile] = useState(null);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
     const fileInputRef = useRef();
 
     useEffect(() => {
@@ -20,12 +20,12 @@ const Account = () => {
 
     const fetchUser = async () => {
         try {
-            const res = await axios.get('/api/accounts/me');
-            setUser(res.data);
-            setDisplayName(res.data.TenHienThi || res.data.tenHienThi || '');
-            setAvatar(res.data.avatar || '');
+            const data = await accountApi.getMe();
+            setUser(data);
+            setDisplayName(data.tenHienThi || '');
         } catch (err) {
-            setMessage('Không thể tải thông tin tài khoản');
+            setError('Không thể tải thông tin tài khoản');
+            console.error('fetchUser error:', err);
         }
     };
 
@@ -35,16 +35,27 @@ const Account = () => {
 
     const handleDisplayNameSubmit = async (e) => {
         e.preventDefault();
+
+        if (!displayName.trim()) {
+            setError('Tên hiển thị không được để trống');
+            return;
+        }
+
+        if (displayName.length > 100) {
+            setError('Tên hiển thị không được vượt quá 100 ký tự');
+            return;
+        }
+
         setLoading(true);
         setMessage('');
+        setError('');
+
         try {
-            const formData = new FormData();
-            formData.append('displayName', displayName);
-            const res = await axios.post('/api/accounts/display-name', formData);
+            const res = await accountApi.updateDisplayName(displayName);
             setMessage('Đã cập nhật tên hiển thị!');
-            setUser((u) => ({ ...u, TenHienThi: res.data.displayName }));
+            setUser((u) => ({ ...u, tenHienThi: res.displayName }));
         } catch (err) {
-            setMessage(err.response?.data || (err.response?.data?.message) || 'Lỗi khi cập nhật tên hiển thị');
+            setError(err.message || 'Lỗi khi cập nhật tên hiển thị');
         } finally {
             setLoading(false);
         }
@@ -54,22 +65,28 @@ const Account = () => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             setAvatarFile(file);
-            // upload immediately
+
+            console.log('🔵 [Account] Starting avatar upload...', file.name);
+
             setLoading(true);
             setMessage('');
+            setError('');
+
             try {
-                const formData = new FormData();
-                formData.append('file', file);
-                const res = await axios.post('/api/accounts/avatar', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' },
-                });
-                setAvatar(res.data.avatar);
-                setUser((u) => ({ ...u, avatar: res.data.avatar }));
+                const res = await accountApi.updateAvatar(file);
+                console.log('✅ [Account] Avatar updated successfully:', res);
+
+                setUser((u) => ({ ...u, avatar: res.avatar }));
                 setMessage('Đã cập nhật ảnh đại diện!');
                 setAvatarFile(null);
                 if (fileInputRef.current) fileInputRef.current.value = '';
+
+                // Reload user data từ server để đảm bảo sync
+                console.log('🔵 [Account] Reloading user data...');
+                await fetchUser();
             } catch (err) {
-                setMessage(err.response?.data || (err.response?.data?.message) || 'Lỗi khi cập nhật ảnh đại diện');
+                console.error('❌ [Account] Avatar update failed:', err);
+                setError(err.message || 'Lỗi khi cập nhật ảnh đại diện');
             } finally {
                 setLoading(false);
             }
@@ -97,8 +114,9 @@ const Account = () => {
     }
 
     const handleCancel = () => {
-        setDisplayName(user.TenHienThi || user.tenHienThi || '');
+        setDisplayName(user.tenHienThi || '');
         setMessage('');
+        setError('');
     };
 
     return (
@@ -124,7 +142,7 @@ const Account = () => {
                                 <div className="flex flex-col items-center -mt-16">
                                     <div className="relative group">
                                         <img
-                                            src={user.avatar || avatar || '/default-avatar.png'}
+                                            src={accountApi.getAvatarUrl(user.avatar)}
                                             alt="avatar"
                                             className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg ring-4 ring-blue-100 transition-transform group-hover:scale-105"
                                         />
@@ -148,9 +166,9 @@ const Account = () => {
                                     </div>
 
                                     <h2 className="mt-4 text-2xl font-bold text-gray-800">
-                                        {displayName || user.TenHienThi || user.tenHienThi || 'Người dùng'}
+                                        {displayName || user.tenHienThi || 'Người dùng'}
                                     </h2>
-                                    <p className="text-sm text-gray-500 mt-1">{user.Email || user.email}</p>
+                                    <p className="text-sm text-gray-500 mt-1">{user.email}</p>
 
                                     {/* Stats */}
                                     <div className="mt-6 w-full">
@@ -211,12 +229,12 @@ const Account = () => {
                                     Email
                                 </label>
                                 <div className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-600">
-                                    {user.Email || user.email}
+                                    {user.email}
                                 </div>
                                 <p className="text-xs text-gray-500 mt-2">Email không thể thay đổi</p>
                             </div>
 
-                            {/* Message */}
+                            {/* Message & Error */}
                             {message && (
                                 <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 rounded-lg">
                                     <div className="flex items-center gap-2">
@@ -224,6 +242,17 @@ const Account = () => {
                                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                         </svg>
                                         <p className="text-green-700 font-medium">{message}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {error && (
+                                <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-rose-50 border-l-4 border-red-500 rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                        </svg>
+                                        <p className="text-red-700 font-medium">{error}</p>
                                     </div>
                                 </div>
                             )}

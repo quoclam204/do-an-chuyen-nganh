@@ -84,8 +84,18 @@ window.close();
             var avatar = User.FindFirst("picture")?.Value;
             if (user != null && !string.IsNullOrEmpty(avatar))
             {
-                user.AnhDaiDienUrl = avatar;
-                _db.SaveChanges();
+                // CHỈ update nếu user CHƯA có avatar custom
+                if (string.IsNullOrWhiteSpace(user.AnhDaiDienUrl) ||
+                    (user.AnhDaiDienUrl.StartsWith("http") && user.AnhDaiDienUrl.Contains("googleusercontent.com")))
+                {
+                    user.AnhDaiDienUrl = avatar;
+                    _db.SaveChanges();
+                    Console.WriteLine($"[Auth] Updated avatar from Google: {avatar}");
+                }
+                else
+                {
+                    Console.WriteLine($"[Auth] Keeping custom avatar: {user.AnhDaiDienUrl}");
+                }
             }
 
             string? picture = User.Claims.FirstOrDefault(c => c.Type.Contains("picture"))?.Value;
