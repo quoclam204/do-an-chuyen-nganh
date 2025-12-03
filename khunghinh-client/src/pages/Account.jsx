@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import useRequireAuth from '../hooks/useRequireAuth';
 import { accountApi } from '../services/accountApi';
+import { authApi } from '../services/authApi';
+import { resolveAvatarUrl } from '../utils/avatarUtils';
 
 const Account = () => {
     const { user: authUser, loading: authLoading } = useRequireAuth();
@@ -81,8 +83,16 @@ const Account = () => {
                 setAvatarFile(null);
                 if (fileInputRef.current) fileInputRef.current.value = '';
 
-                // Reload user data từ server để đảm bảo sync
-                console.log('🔵 [Account] Reloading user data...');
+                // ✅ Gọi authApi.getMe() để cập nhật localStorage + phát sự kiện
+                console.log('🔵 [Account] Syncing with authApi.getMe()...');
+                try {
+                    await authApi.getMe(); // Tự động cập nhật localStorage và phát event
+                    console.log('✅ [Account] Auth sync completed');
+                } catch (syncErr) {
+                    console.error('⚠️ [Account] Auth sync failed:', syncErr);
+                }
+
+                // Reload user data cho component này
                 await fetchUser();
             } catch (err) {
                 console.error('❌ [Account] Avatar update failed:', err);
@@ -142,7 +152,7 @@ const Account = () => {
                                 <div className="flex flex-col items-center -mt-16">
                                     <div className="relative group">
                                         <img
-                                            src={accountApi.getAvatarUrl(user.avatar)}
+                                            src={resolveAvatarUrl(user.avatar, user.tenHienThi || user.email)}
                                             alt="avatar"
                                             className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg ring-4 ring-blue-100 transition-transform group-hover:scale-105"
                                         />

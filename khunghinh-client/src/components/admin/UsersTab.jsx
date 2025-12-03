@@ -4,6 +4,7 @@ import {
     UserCheck, UserX, Mail, Calendar, MoreVertical, AlertTriangle,
     Crown, User, Settings, Lock, Unlock, RefreshCw, Star, X
 } from 'lucide-react'
+import { resolveAvatarUrl } from '../../utils/avatarUtils'
 
 // API Configuration - Sử dụng cách tốt hơn
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'http://localhost:7090').replace(/\/$/, '')
@@ -143,16 +144,12 @@ function UserDetailModal({
                     <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
                         <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-xl bg-blue-100 grid place-items-center relative">
-                                {user.avatar ? (
-                                    <img
-                                        src={user.avatar}
-                                        alt={user.name}
-                                        className="w-full h-full rounded-xl object-cover"
-                                        onError={(e) => {
-                                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&size=48`
-                                        }}
-                                    />
-                                ) : (
+                                <img
+                                    src={resolveAvatarUrl(user.avatar, user.name)}
+                                    alt={user.name}
+                                    className="w-full h-full rounded-xl object-cover"
+                                />
+                                {!user.avatar && (
                                     <User size={20} className="text-blue-600" />
                                 )}
                                 {isSuper && (
@@ -181,16 +178,12 @@ function UserDetailModal({
                                 <div>
                                     <h4 className="font-semibold mb-3 text-gray-900">Ảnh đại diện</h4>
                                     <div className="aspect-square w-48 mx-auto rounded-2xl overflow-hidden bg-slate-100 ring-2 ring-white shadow-lg relative">
-                                        {user.avatar ? (
-                                            <img
-                                                src={user.avatar}
-                                                alt={user.name}
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => {
-                                                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&size=192`
-                                                }}
-                                            />
-                                        ) : (
+                                        <img
+                                            src={resolveAvatarUrl(user.avatar, user.name)}
+                                            alt={user.name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        {!user.avatar && (
                                             <div className="w-full h-full grid place-items-center">
                                                 <div className="text-center">
                                                     <User size={48} className="text-slate-400 mx-auto mb-2" />
@@ -428,7 +421,7 @@ function BanUserModal({ user, isOpen, onClose, onConfirm }) {
                             <div className="flex items-center gap-3">
                                 <div className="relative">
                                     <img
-                                        src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&size=48`}
+                                        src={resolveAvatarUrl(user.avatar, user.name)}
                                         alt={user.name}
                                         className="w-12 h-12 rounded-full"
                                     />
@@ -1350,7 +1343,7 @@ export default function UsersTab() {
                                             <div className="flex items-center gap-4">
                                                 <div className="relative">
                                                     <img
-                                                        src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&size=48`}
+                                                        src={resolveAvatarUrl(user.avatar, user.name)}
                                                         alt={user.name}
                                                         className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-sm"
                                                     />

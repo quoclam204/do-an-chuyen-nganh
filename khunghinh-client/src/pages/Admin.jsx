@@ -6,6 +6,7 @@ import {
   LogOut, Bell, Search, ChevronDown, ChevronRight, MoreVertical, X, Check, Clock, User,
   TrendingUp, Activity, AlertCircle, Eye
 } from 'lucide-react'
+import { resolveAvatarUrl } from '../utils/avatarUtils'
 
 // Import các tab components
 import DashboardTab from '../components/admin/DashboardTab'
@@ -379,7 +380,7 @@ export default function Admin() {
           <div className="border-t border-slate-200/70 bg-white/75 px-3 py-4">
             <div className="flex items-center gap-3 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-3">
               <img
-                src={me?.picture || me?.AnhDaiDienUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(me?.name || me?.TenHienThi || 'Admin')}&background=0D8ABC&color=fff&size=128&bold=true`}
+                src={resolveAvatarUrl(me?.picture || me?.avatar, me?.name || me?.TenHienThi || 'Admin')}
                 alt="avatar"
                 className="size-10 rounded-full object-cover"
                 referrerPolicy="no-referrer"

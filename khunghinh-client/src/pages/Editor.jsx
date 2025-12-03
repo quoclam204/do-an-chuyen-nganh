@@ -5,6 +5,7 @@ import { getFrameByAlias } from '../utils/frameService'
 import useImage from 'use-image'
 import { Stage, Layer, Image as KImage, Rect, Group, Text as KText, Circle } from 'react-konva'
 import NotFound from '../components/NotFound'
+import { resolveAvatarUrl } from '../utils/avatarUtils'
 
 // ✅ Thêm BACKEND_ORIGIN
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
@@ -841,7 +842,7 @@ export default function Editor() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-sm w-full">
             <div className="flex flex-col items-center text-center">
               <img
-                src={frame.owner.avatar || '/icon/default-avatar.png'}
+                src={resolveAvatarUrl(frame.owner.avatar, frame.owner.name)}
                 alt={frame.owner.name}
                 className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 mb-3 shadow-sm"
               />

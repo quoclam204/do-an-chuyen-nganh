@@ -149,9 +149,7 @@ class AccountApiService {
         }
 
         // Nếu là relative path, ghép với API_BASE
-        // Thêm timestamp để tránh cache browser
-        const timestamp = new Date().getTime()
-        return `${API_BASE}${avatarPath}?t=${timestamp}`
+        return `${API_BASE}${avatarPath}`
     }
 }
 

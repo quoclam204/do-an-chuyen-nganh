@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Loader2, Search, ChevronDown, Trash2, Pencil, Eye } from 'lucide-react'
 import useRequireAuth from '../hooks/useRequireAuth'
+import { resolveAvatarUrl } from '../utils/avatarUtils'
 
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 
 // ===== helpers =====
-const getAvatarUrl = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=0D8ABC&color=fff&size=128&bold=true`
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString('vi-VN') : '-')
 
 // ✅ Mapping loại khung
@@ -251,7 +251,7 @@ export default function MyFrames() {
                         <div className="absolute inset-0 bg-[radial-gradient(80%_60%_at_10%_10%,#e0f2fe_0%,transparent_60%),radial-gradient(80%_60%_at_90%_10%,#dcfce7_0%,transparent_60%)] opacity-60" />
                         <div className="relative p-6 text-center">
                             <img
-                                src={me?.picture || getAvatarUrl(me?.name)}
+                                src={resolveAvatarUrl(me?.picture || me?.avatar, me?.name)}
                                 alt="Avatar"
                                 className="mx-auto mb-3 size-24 rounded-full object-cover ring-2 ring-white shadow-lg"
                                 referrerPolicy="no-referrer"

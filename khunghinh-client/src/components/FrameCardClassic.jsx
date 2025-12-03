@@ -1,5 +1,6 @@
 // src/components/FrameCardClassic.jsx
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom";
+import { resolveAvatarUrl } from '../utils/avatarUtils';
 import { Eye, ImageDown, Clock } from "lucide-react"
 
 export default function FrameCardClassic({ frame }) {
@@ -72,7 +73,7 @@ export default function FrameCardClassic({ frame }) {
           {frame.owner && (
             <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100">
               <img
-                src={frame.owner.avatar || "/icon/default-avatar.png"}
+                src={resolveAvatarUrl(frame.owner.avatar, frame.owner.name)}
                 alt={frame.owner.name}
                 className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
               />

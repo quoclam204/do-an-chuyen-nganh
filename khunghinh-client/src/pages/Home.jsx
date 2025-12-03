@@ -9,6 +9,7 @@ import { motion } from 'framer-motion'
 import { MotionCard, MotionStagger, fadeUp } from '../components/Anim'
 import { Play } from "lucide-react";
 import { FileDown } from 'lucide-react'
+import { resolveAvatarUrl } from '../utils/avatarUtils'
 
 import { Link } from "react-router-dom";
 import Login from '../pages/Login'
@@ -446,7 +447,7 @@ export default function Home() {
                       {f.owner && (
                         <div className="flex items-center gap-2 mb-3">
                           <img
-                            src={f.owner.avatar || '/icon/default-avatar.png'}
+                            src={resolveAvatarUrl(f.owner.avatar, f.owner.name)}
                             alt={f.owner.name}
                             className="w-8 h-8 rounded-full object-cover border-2 border-gray-200"
                           />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Download, Share2, Eye, Calendar, User, Loader2, Heart, Copy, Check, Edit } from 'lucide-react'
+import { resolveAvatarUrl } from '../utils/avatarUtils'
 
 const BACKEND_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'https://localhost:7090').replace(/\/$/, '')
 
@@ -364,7 +365,7 @@ export default function FrameDetail() {
                                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Tác giả</h3>
                                 <div className="flex items-center gap-3">
                                     <img
-                                        src={frame.owner.avatar || getAvatarUrl(frame.owner.name)}
+                                        src={resolveAvatarUrl(frame.owner.avatar, frame.owner.name)}
                                         alt={frame.owner.name}
                                         className="size-12 rounded-full object-cover ring-2 ring-white shadow"
                                         referrerPolicy="no-referrer"

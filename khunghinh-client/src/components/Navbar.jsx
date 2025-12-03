@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X, ChevronDown, User, Image, LogOut, RefreshCw, Crop, FileImage, ImageIcon } from 'lucide-react'
 import Login from '../pages/Login'
 import { authApi } from '../services/authApi'
+import { getAvatarUrlWithTimestamp } from '../utils/avatarUtils'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
@@ -152,9 +153,10 @@ export default function Navbar() {
   const isAdmin = me?.vaiTro === "admin"
   const isLoggedIn = !!me
 
-  const avatarUrl =
-    me?.picture ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff&size=96`
+  // ✅ Sử dụng utility chung để resolve avatar URL
+  const avatarUrl = getAvatarUrlWithTimestamp(me?.picture || me?.avatar, name)
+
+  console.log('🔍 [Navbar] Avatar URL:', avatarUrl)
 
   return (
     <>
