@@ -4,6 +4,7 @@ import {
     Eye, Trash2, Star, ImageIcon, Edit, MoreVertical, ToggleLeft, ToggleRight,
     Calendar, User, TrendingUp, Download, AlertTriangle
 } from 'lucide-react'
+import { resolveAvatarUrl } from '../../utils/avatarUtils'
 
 // API Configuration - Thay đổi dòng này
 const API_BASE = import.meta.env.VITE_API_ORIGIN || 'http://localhost:7090'
@@ -229,7 +230,7 @@ function FrameDetailModal({ frame, isOpen, onClose, onStatusChange }) {
                                         <h4 className="font-semibold mb-3 text-gray-900">Thông tin tác giả</h4>
                                         <div className="flex items-center gap-3">
                                             <img
-                                                src={frame.owner.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(frame.owner.name || 'User')}&size=48`}
+                                                src={resolveAvatarUrl(frame.owner.avatar, frame.owner.name)}
                                                 alt={frame.owner.name}
                                                 className="w-12 h-12 rounded-full ring-2 ring-white shadow-sm"
                                             />
@@ -721,7 +722,7 @@ export default function FramesTab() {
                                         {frame.owner ? (
                                             <div className="flex items-center gap-2">
                                                 <img
-                                                    src={frame.owner.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(frame.owner.name)}&size=32`}
+                                                    src={resolveAvatarUrl(frame.owner.avatar, frame.owner.name)}
                                                     alt={frame.owner.name}
                                                     className="w-8 h-8 rounded-full"
                                                 />

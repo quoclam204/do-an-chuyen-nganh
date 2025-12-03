@@ -33,8 +33,6 @@ const formatDate = (d) => {
     })
 }
 
-const getAvatarUrl = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=0D8ABC&color=fff&size=128&bold=true`
-
 function StatusBadge({ status }) {
     const meta = STATUS_META[status] || STATUS_META['dang_hoat_dong']
     return (
