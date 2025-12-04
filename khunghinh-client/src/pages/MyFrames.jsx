@@ -95,6 +95,28 @@ export default function MyFrames() {
         fetchMyFrames()
     }, [])
 
+    // ✅ Lắng nghe thay đổi avatar từ Account.jsx
+    useEffect(() => {
+        const handleAvatarChange = () => {
+            try {
+                const userData = JSON.parse(localStorage.getItem('kh_me') || 'null')
+                if (userData) {
+                    setMe(userData)
+                }
+            } catch (err) {
+                console.error('Error syncing avatar:', err)
+            }
+        }
+
+        window.addEventListener('kh_me_changed', handleAvatarChange)
+        window.addEventListener('storage', handleAvatarChange)
+
+        return () => {
+            window.removeEventListener('kh_me_changed', handleAvatarChange)
+            window.removeEventListener('storage', handleAvatarChange)
+        }
+    }, [])
+
     // Thêm function fetch thông tin user từ API
     async function fetchUserProfile() {
         try {

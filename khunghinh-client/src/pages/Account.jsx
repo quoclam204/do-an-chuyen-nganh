@@ -68,34 +68,41 @@ const Account = () => {
             const file = e.target.files[0];
             setAvatarFile(file);
 
-            console.log('🔵 [Account] Starting avatar upload...', file.name);
-
             setLoading(true);
             setMessage('');
             setError('');
 
             try {
                 const res = await accountApi.updateAvatar(file);
-                console.log('✅ [Account] Avatar updated successfully:', res);
 
                 setUser((u) => ({ ...u, avatar: res.avatar }));
                 setMessage('Đã cập nhật ảnh đại diện!');
                 setAvatarFile(null);
                 if (fileInputRef.current) fileInputRef.current.value = '';
 
-                // ✅ Gọi authApi.getMe() để cập nhật localStorage + phát sự kiện
-                console.log('🔵 [Account] Syncing with authApi.getMe()...');
+                // ✅ Cập nhật localStorage + phát event thủ công
                 try {
-                    await authApi.getMe(); // Tự động cập nhật localStorage và phát event
-                    console.log('✅ [Account] Auth sync completed');
+                    const currentUser = JSON.parse(localStorage.getItem('kh_me') || '{}');
+                    const updatedUser = {
+                        ...currentUser,
+                        avatar: res.avatar,
+                        picture: res.avatar
+                    };
+                    localStorage.setItem('kh_me', JSON.stringify(updatedUser));
+                    window.dispatchEvent(new Event('kh_me_changed'));
+                    window.dispatchEvent(new StorageEvent('storage', {
+                        key: 'kh_me',
+                        newValue: JSON.stringify(updatedUser),
+                        url: window.location.href
+                    }));
                 } catch (syncErr) {
-                    console.error('⚠️ [Account] Auth sync failed:', syncErr);
+                    console.error('Failed to sync localStorage:', syncErr);
                 }
 
                 // Reload user data cho component này
                 await fetchUser();
             } catch (err) {
-                console.error('❌ [Account] Avatar update failed:', err);
+                console.error('Avatar update failed:', err);
                 setError(err.message || 'Lỗi khi cập nhật ảnh đại diện');
             } finally {
                 setLoading(false);
