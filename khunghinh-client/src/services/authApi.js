@@ -62,6 +62,26 @@ class AuthApiService {
 
         const user = await response.json()
 
+        // ✅ Lấy thông tin mới nhất từ database (bao gồm avatar đã cập nhật)
+        try {
+            const accountResponse = await fetch(`${API_BASE}/api/accounts/me`, {
+                credentials: 'include',
+            })
+
+            if (accountResponse.ok) {
+                const accountData = await accountResponse.json()
+                // Merge data từ database vào user từ auth/claims
+                // Ưu tiên dùng avatar, tenHienThi từ database (mới nhất)
+                user.avatar = accountData.avatar || user.avatar
+                user.picture = accountData.avatar || user.picture  // Cho Google OAuth
+                user.tenHienThi = accountData.tenHienThi || user.tenHienThi
+                user.framesCount = accountData.framesCount || 0
+            }
+        } catch (error) {
+            // Nếu không lấy được từ accounts, tiếp tục với data từ auth
+            console.error('Failed to fetch latest account data:', error)
+        }
+
         // Lưu vào localStorage và dispatch event
         localStorage.setItem('kh_me', JSON.stringify(user))
         window.dispatchEvent(new Event('kh_me_changed'))
