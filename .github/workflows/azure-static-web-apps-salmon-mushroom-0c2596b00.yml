@@ -12,20 +12,34 @@ jobs:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
+
     steps:
       - uses: actions/checkout@v4
         with:
-            submodules: false
-            fetch-depth: 0
+          submodules: false
+          fetch-depth: 0
 
       - name: Use Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: khunghinh-client/package-lock.json
+
+      # Cấu hình npm để hạn chế lỗi 500 từ registry
+      - name: Configure npm retries
+      # (step này chạy trong thư mục client)
+        working-directory: khunghinh-client
+        run: |
+          npm config set fetch-retries 5
+          npm config set fetch-retry-mintimeout 10000
+          npm config set fetch-retry-maxtimeout 60000
+          # Nếu sau này vẫn hay lỗi, có thể dùng mirror:
+          # npm config set registry https://registry.npmmirror.com
 
       - name: Install deps
         working-directory: khunghinh-client
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       # Fix quyền thực thi cho vite (tránh "Permission denied")
       - name: Ensure vite is executable
