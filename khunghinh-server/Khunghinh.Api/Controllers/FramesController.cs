@@ -23,7 +23,7 @@ namespace Khunghinh.Api.Controllers
 
         [HttpPost]
         [Authorize]
-        public async Task<IActionResult> Create([FromForm] IFormFile file, [FromForm] string title, [FromForm] string alias, [FromForm] string? type)
+        public async Task<IActionResult> Create([FromForm] IFormFile file, [FromForm] string title, [FromForm] string? alias, [FromForm] string? type)
         {
             try
             {
@@ -61,7 +61,7 @@ namespace Khunghinh.Api.Controllers
                 if (string.IsNullOrWhiteSpace(userEmail))
                     return Unauthorized("Không tìm thấy thông tin email trong phiên đăng nhập");
 
-                var user = _db.NguoiDungs.FirstOrDefault(x => x.Email == userEmail);
+                var user = _db.NguoiDungs.FirstOrDefault(x => x.Email ==     userEmail);
                 if (user == null)
                     return Unauthorized("Người dùng không tồn tại");
 
