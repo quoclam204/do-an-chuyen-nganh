@@ -136,67 +136,52 @@ export default function Admin() {
     }
   }, [me])
 
-  // Mock notifications - Replace with real API call
+  // Load notifications from API
   const loadNotifications = async () => {
     try {
-      // Mock data - replace with actual API call when backend is ready
-      const mockNotifications = [
-        {
-          id: 1,
-          tieuDe: 'Khung hình mới được tạo',
-          noiDung: 'Người dùng "John Doe" đã tạo khung hình "Summer Vibes"',
-          loai: 'new_frame',
-          thoiGian: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
-          daDoc: false
-        },
-        {
-          id: 2,
-          tieuDe: 'Báo cáo vi phạm mới',
-          noiDung: 'Khung hình "Sunset Frame" bị báo cáo vi phạm bản quyền',
-          loai: 'frame_reported',
-          thoiGian: new Date(Date.now() - 900000).toISOString(), // 15 minutes ago
-          daDoc: false
-        },
-        {
-          id: 3,
-          tieuDe: 'Người dùng mới đăng ký',
-          noiDung: 'jane.smith@example.com đã tạo tài khoản mới',
-          loai: 'user_registered',
-          thoiGian: new Date(Date.now() - 1800000).toISOString(), // 30 minutes ago
-          daDoc: true
-        }
-      ]
+      // Call real API to get notifications
+      const data = await apiCall('/admin/notifications')
 
-      setNotifications(mockNotifications)
-      setUnreadCount(mockNotifications.filter(n => !n.daDoc).length)
-
-      // TODO: Replace with real API call:
-      // const data = await apiCall('/admin/notifications')
-      // setNotifications(data.notifications || []) 
-      // setUnreadCount(data.unreadCount || 0)
+      if (data && data.notifications) {
+        setNotifications(data.notifications || [])
+        setUnreadCount(data.unreadCount || 0)
+      } else {
+        // Fallback to empty if no data
+        setNotifications([])
+        setUnreadCount(0)
+      }
 
     } catch (error) {
       console.error('Failed to load notifications:', error)
+      // Set empty on error
+      setNotifications([])
+      setUnreadCount(0)
     }
   }
 
-  // Mock notification actions - Replace with real API
+  // Notification actions with real API
   const markAsRead = async (notificationId) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === notificationId ? { ...n, daDoc: true } : n)
-    )
-    setUnreadCount(prev => Math.max(0, prev - 1))
+    try {
+      await apiCall(`/admin/notifications/${notificationId}/read`, { method: 'PATCH' })
 
-    // TODO: Replace with real API call:
-    // await apiCall(`/admin/notifications/${notificationId}/read`, { method: 'PATCH' })
+      setNotifications(prev =>
+        prev.map(n => n.id === notificationId ? { ...n, daDoc: true } : n)
+      )
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error)
+    }
   }
 
   const markAllAsRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, daDoc: true })))
-    setUnreadCount(0)
+    try {
+      await apiCall('/admin/notifications/read-all', { method: 'PATCH' })
 
-    // TODO: Replace with real API call:
-    // await apiCall('/admin/notifications/read-all', { method: 'PATCH' })
+      setNotifications(prev => prev.map(n => ({ ...n, daDoc: true })))
+      setUnreadCount(0)
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error)
+    }
   }
 
   // Helper functions
@@ -236,6 +221,7 @@ export default function Admin() {
     switch (type) {
       case 'new_frame': return <ImageIcon size={16} className="text-blue-600" />
       case 'user_registered': return <User size={16} className="text-green-600" />
+      case 'user_login': return <Activity size={16} className="text-purple-600" />
       case 'frame_reported': return <Shield size={16} className="text-red-600" />
       default: return <Bell size={16} className="text-gray-600" />
     }
@@ -246,12 +232,19 @@ export default function Admin() {
     const roleDisplay = getRoleDisplayName(me?.vaiTro || me?.role)
     const name = me?.name || me?.ten || me?.TenHienThi || 'Admin'
 
-    let timeGreeting = '👋'
-    if (hour < 12) timeGreeting = '🌅 Chào buổi sáng'
-    else if (hour < 17) timeGreeting = '☀️ Chào buổi chiều'
-    else timeGreeting = '🌙 Chào buổi tối'
+    let timeGreeting = 'Chào bạn'
+    if (hour < 12) timeGreeting = 'Chào buổi sáng'
+    else if (hour < 17) timeGreeting = 'Chào buổi chiều'
+    else timeGreeting = 'Chào buổi tối'
 
     return `${timeGreeting}, ${roleDisplay} ${name}!`
+  }
+
+  const getGreetingIcon = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return '🌅'
+    if (hour < 17) return '☀️'
+    return '🌙'
   }
 
   // Layout constants
@@ -430,27 +423,30 @@ export default function Admin() {
       >
         {/* Topbar cải tiến */}
         <div className="sticky z-20" style={{ top: TOP }}>
-          <div className="rounded-2xl backdrop-blur bg-white/90 ring-1 ring-slate-200 shadow-sm">
-            <div className="px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="rounded-2xl backdrop-blur bg-gradient-to-r from-white/95 via-blue-50/80 to-green-50/80 ring-1 ring-slate-200 shadow-lg">
+            <div className="px-4 sm:px-6 py-3 flex items-center justify-between">
               {/* Left section - Welcome message */}
               <div className="flex items-center gap-4 min-w-0">
                 <button
-                  className="md:hidden rounded-xl bg-white ring-1 ring-slate-200 px-3 py-1.5 text-sm font-medium"
+                  className="md:hidden rounded-xl bg-white ring-1 ring-slate-200 px-3 py-1.5 text-sm font-medium hover:bg-gray-50 transition"
                   onClick={() => setSidebarOpen(s => !s)}
                 >
                   Menu
                 </button>
 
                 <div className="hidden md:block">
-                  <div className="text-sm text-gray-500">
-                    {new Date().toLocaleDateString('vi-VN', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-base">{getGreetingIcon()}</span>
+                    <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                      {new Date().toLocaleDateString('vi-VN', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </div>
                   </div>
-                  <div className="text-lg font-semibold text-gray-900">
+                  <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
                     {getGreetingMessage()}
                   </div>
                 </div>
@@ -461,14 +457,21 @@ export default function Admin() {
                 {/* Quick activity indicators */}
                 <div className="hidden xl:flex items-center gap-2 text-xs">
                   {stats.reportsOpen > 0 && (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 rounded-lg">
-                      <AlertCircle size={14} />
-                      <span className="font-medium">{stats.reportsOpen}</span>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-red-50 to-rose-50 text-red-700 rounded-full ring-1 ring-red-200/50 shadow-sm">
+                      <AlertCircle size={14} className="animate-pulse" />
+                      <span className="font-semibold">{stats.reportsOpen}</span>
+                      <span className="hidden lg:inline">báo cáo</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-lg">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 rounded-full ring-1 ring-blue-200/50 shadow-sm">
                     <Activity size={14} />
-                    <span className="font-medium">{stats.publicFrames} active</span>
+                    <span className="font-semibold">{stats.publicFrames}</span>
+                    <span className="hidden lg:inline">đang hoạt động</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 rounded-full ring-1 ring-green-200/50 shadow-sm">
+                    <Users size={14} />
+                    <span className="font-semibold">{stats.totalUsers}</span>
+                    <span className="hidden lg:inline">người dùng</span>
                   </div>
                 </div>
 
@@ -553,6 +556,18 @@ export default function Admin() {
                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-medium">
                                           <ImageIcon size={10} />
                                           Khung mới
+                                        </span>
+                                      )}
+                                      {notification.loai === 'user_login' && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-medium">
+                                          <Activity size={10} />
+                                          Đăng nhập
+                                        </span>
+                                      )}
+                                      {notification.loai === 'user_registered' && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-medium">
+                                          <User size={10} />
+                                          Đăng ký mới
                                         </span>
                                       )}
                                     </div>
