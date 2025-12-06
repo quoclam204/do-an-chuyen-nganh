@@ -344,8 +344,8 @@ function UserDetailModal({
                                             )}
                                         </div>
 
-                                        {/* ✅ SỬA: Ban/Unban button - CHỈ HIỂN THỊ CHO SUPER ADMIN */}
-                                        {callerIsSuper && (
+                                        {/* ✅ TẠM ẨN: Ban/Unban button */}
+                                        {/* {callerIsSuper && (
                                             user.status === 'bi_khoa' ? (
                                                 <button
                                                     onClick={() => {
@@ -367,7 +367,7 @@ function UserDetailModal({
                                                     <Ban size={16} /> Khóa tài khoản
                                                 </button>
                                             )
-                                        )}
+                                        )} */}
                                     </div>
                                 </div>
                             </div>
@@ -1418,32 +1418,33 @@ export default function UsersTab() {
                                                     const currentUser = users.find(u => u.email === currentUserData?.email)
                                                     const callerIsSuper = currentUser?.isSuper === true || currentUser?.isSuper === 1
 
-                                                    // ❌ Không phải Super Admin → KHÔNG hiển thị nút
-                                                    if (!callerIsSuper) {
-                                                        return null
-                                                    }
+                                                    // ❌ TẠM ẨN - Không phải Super Admin → KHÔNG hiển thị nút
+                                                    // if (!callerIsSuper) {
+                                                    //     return null
+                                                    // }
 
-                                                    // ✅ Super Admin → Hiển thị nút dựa trên trạng thái
-                                                    return user.status === 'bi_khoa' ? (
-                                                        <button
-                                                            onClick={() => unlockUser(user.id)}
-                                                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
-                                                            title="Mở khóa tài khoản"
-                                                        >
-                                                            <Unlock size={14} /> Mở khóa
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedUser(user)
-                                                                setShowBanModal(true)
-                                                            }}
-                                                            className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 transition-colors"
-                                                            title="Khóa tài khoản"
-                                                        >
-                                                            <Ban size={14} /> Khóa
-                                                        </button>
-                                                    )
+                                                    // // ✅ Super Admin → Hiển thị nút dựa trên trạng thái
+                                                    // return user.status === 'bi_khoa' ? (
+                                                    //     <button
+                                                    //         onClick={() => unlockUser(user.id)}
+                                                    //         className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
+                                                    //         title="Mở khóa tài khoản"
+                                                    //     >
+                                                    //         <Unlock size={14} /> Mở khóa
+                                                    //     </button>
+                                                    // ) : (
+                                                    //     <button
+                                                    //         onClick={() => {
+                                                    //             setSelectedUser(user)
+                                                    //             setShowBanModal(true)
+                                                    //         }}
+                                                    //         className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 transition-colors"
+                                                    //         title="Khóa tài khoản"
+                                                    //     >
+                                                    //         <Ban size={14} /> Khóa
+                                                    //     </button>
+                                                    // )
+                                                    return null // TẠM ẨN NÚT KHÓA
                                                 })()}
                                             </div>
                                         </td>

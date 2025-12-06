@@ -294,22 +294,22 @@ export default function FrameDetail() {
 
                         {/* Action buttons */}
                         <div className="flex gap-3">
-                            <button
+                            {/*<button
                                 onClick={handleDownload}
                                 disabled={!frame.downloadUrl}
                                 className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg shadow-blue-500/30"
                             >
                                 <Download size={20} />
                                 Tải xuống
-                            </button>
+                            </button> */}
 
-                            <button
+                            {/* <button
                                 onClick={handleShare}
                                 className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-gray-700 rounded-xl font-semibold hover:bg-gray-50 ring-1 ring-gray-200 transition"
                             >
                                 {copied ? <Check size={20} className="text-green-600" /> : <Share2 size={20} />}
                                 {copied ? 'Đã sao chép!' : 'Chia sẻ'}
-                            </button>
+                            </button> */}
                         </div>
 
                         {/* ✅ Thêm nút "Dùng khung này" */}

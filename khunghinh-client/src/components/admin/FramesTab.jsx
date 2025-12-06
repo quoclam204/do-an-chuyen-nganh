@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import {
     Search, ChevronDown, Upload, Filter, CheckCircle2, XCircle,
     Eye, Trash2, Star, ImageIcon, Edit, MoreVertical, ToggleLeft, ToggleRight,
@@ -299,9 +300,12 @@ function FrameDetailModal({ frame, isOpen, onClose, onStatusChange }) {
                                                         <ToggleRight size={16} /> Kích hoạt
                                                     </button>
                                                 )}
-                                                <button className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-blue-700 transition-colors">
-                                                    <Upload size={16} /> Thay ảnh
-                                                </button>
+                                                <Link
+                                                    to={`/${frame.alias}`}
+                                                    className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+                                                >
+                                                    <Eye size={16} /> Xem khung hình
+                                                </Link>
                                             </div>
                                         )}
                                     </div>
@@ -403,6 +407,8 @@ function DeleteConfirmModal({ frame, isOpen, onClose, onConfirm }) {
 
 // Main FramesTab Component
 export default function FramesTab() {
+    const navigate = useNavigate()
+
     // State management
     const [frames, setFrames] = useState([])
     const [loading, setLoading] = useState(true)
@@ -638,9 +644,9 @@ export default function FramesTab() {
                         >
                             <option value="all">Tất cả trạng thái</option>
                             <option value="dang_hoat_dong">Đang hoạt động</option>
-                            <option value="cho_duyet">Chờ duyệt</option>
+                            {/* <option value="cho_duyet">Chờ duyệt</option> */}
                             <option value="bi_khoa">Bị khóa</option>
-                            <option value="da_xoa">Đã xóa</option>
+                            {/* <option value="da_xoa">Đã xóa</option> */}
                         </select>
                         <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                     </div>
@@ -654,12 +660,15 @@ export default function FramesTab() {
                 </div>
 
                 <div className="flex gap-2">
-                    <button className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-black transition-colors">
+                    <button
+                        onClick={() => navigate('/create-frame')}
+                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:from-blue-700 hover:to-indigo-700 shadow-sm transition-all"
+                    >
                         <Upload size={16} /> Thêm khung
                     </button>
-                    <button className="inline-flex items-center gap-2 rounded-xl bg-white ring-1 ring-slate-200 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 transition-colors">
+                    {/* <button className="inline-flex items-center gap-2 rounded-xl bg-white ring-1 ring-slate-200 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 transition-colors">
                         <Filter size={16} /> Bộ lọc nâng cao
-                    </button>
+                    </button> */}
                 </div>
             </div>
 

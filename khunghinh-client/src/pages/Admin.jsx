@@ -312,13 +312,18 @@ export default function Admin() {
         <div className="h-full rounded-3xl overflow-hidden bg-white/65 backdrop-blur-md ring-1 ring-slate-200/70 shadow-[0_6px_24px_rgba(0,0,0,0.08)] flex flex-col">
           {/* Header logo */}
           <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-200/60 bg-gradient-to-r from-blue-50 to-green-50">
-            <div className="size-10 grid place-items-center rounded-2xl bg-blue-600 text-white shadow-md">
-              <BarChart3 size={20} />
+            <div className="size-10 grid place-items-center rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg>
             </div>
             {sidebarOpen && (
               <div>
-                <div className="text-[12px] text-slate-500 leading-none">Admin Panel</div>
-                <div className="text-lg font-extrabold tracking-tight text-slate-900">TrendyFrame</div>
+                <div className="text-[11px] font-medium text-blue-600/80 uppercase tracking-wide leading-none">Dashboard</div>
+                <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">TrendyFrame</div>
               </div>
             )}
           </div>
@@ -463,7 +468,7 @@ export default function Admin() {
                       <span className="hidden lg:inline">báo cáo</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 rounded-full ring-1 ring-blue-200/50 shadow-sm">
+                  {/* <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 rounded-full ring-1 ring-blue-200/50 shadow-sm">
                     <Activity size={14} />
                     <span className="font-semibold">{stats.publicFrames}</span>
                     <span className="hidden lg:inline">đang hoạt động</span>
@@ -472,7 +477,7 @@ export default function Admin() {
                     <Users size={14} />
                     <span className="font-semibold">{stats.totalUsers}</span>
                     <span className="hidden lg:inline">người dùng</span>
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Notifications dropdown */}

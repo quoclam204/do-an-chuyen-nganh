@@ -580,3 +580,23 @@ GO
 SELECT Id, Email, TenHienThi, TrangThai, NgayCapNhat
 FROM NguoiDung
 WHERE Id = 6;
+
+
+-- Check hiện tại trong csdl có bao nhiêu loại
+SELECT definition 
+FROM sys.check_constraints 
+WHERE name = 'CK_KH_Loai';
+-- 1. Xóa constraint cũ
+ALTER TABLE KhungHinh DROP CONSTRAINT CK_KH_Loai;
+-- 2. Tạo constraint mới với đầy đủ 8 giá trị
+ALTER TABLE KhungHinh ADD CONSTRAINT CK_KH_Loai 
+CHECK ([Loai] IN (
+    'su_kien',
+    'le_hoi',
+    'hoat_dong',     -- ✅ THÊM MỚI
+    'chien_dich',
+    'thuong_hieu',   -- ✅ THÊM MỚI
+    'giai_tri',      -- ✅ THÊM MỚI
+    'sang_tao',      -- ✅ THÊM MỚI
+    'khac'
+));
