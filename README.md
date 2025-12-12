@@ -1,4 +1,4 @@
-<div align="center">
+<img width="1919" height="1028" alt="Screenshot 2025-12-12 164435" src="https://github.com/user-attachments/assets/4ba8a655-d69e-44c8-bc6a-607b30e47731" /><div align="center">
 
 # 🖼️ Photo Frame Creator System
 
@@ -375,14 +375,14 @@ REACT_APP_AZURE_STORAGE_URL=https://your-storage-account.blob.core.windows.net
 
 ### 🏠 Home Page
 <!-- Replace with your actual screenshot -->
-![Home Page](https://via.placeholder.com/800x400/4A90E2/ffffff?text=Home+Page+Screenshot)
+<img width="1919" height="1028" alt="Screenshot 2025-12-12 164435" src="https://github.com/user-attachments/assets/5711be69-6c84-4add-a72c-5d1433642253" />
 *Modern and intuitive home page with featured frame templates*
 
 ---
 
 ### 🎨 Frame Editor
 <!-- Replace with your actual screenshot -->
-![Frame Editor](https://via.placeholder.com/800x400/7B68EE/ffffff?text=Frame+Editor+Screenshot)
+<img width="1919" height="1032" alt="Screenshot 2025-12-12 164454" src="https://github.com/user-attachments/assets/865e2da3-1f17-41ca-a21f-b87d3cec5165" />
 *Powerful editor with real-time preview and customization options*
 
 ---
