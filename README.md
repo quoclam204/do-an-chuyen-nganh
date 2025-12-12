@@ -1,13 +1,8 @@
+<div align="center">
+
 # 🖼️ Photo Frame Creator System
 
 **Capstone Project - Online Photo Frame Creation and Management Web Application**
-
-[![GitHub Stars](https://img.shields.io/github/stars/quoclam204/do-an-chuyen-nganh? style=social)](https://github.com/quoclam204/do-an-chuyen-nganh/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/quoclam204/do-an-chuyen-nganh?style=social)](https://github.com/quoclam204/do-an-chuyen-nganh/network/members)
-[![GitHub Issues](https://img.shields.io/github/issues/quoclam204/do-an-chuyen-nganh)](https://github.com/quoclam204/do-an-chuyen-nganh/issues)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-
-[Features](#-features) • [Tech Stack](#-tech-stack) • [Installation](#-installation) • [Screenshots](#-screenshots) • [Contributing](#-contributing)
 
 </div>
 
