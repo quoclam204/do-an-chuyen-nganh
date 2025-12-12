@@ -1,5 +1,3 @@
-<img width="1919" height="1028" alt="Screenshot 2025-12-12 164435" src="https://github.com/user-attachments/assets/4ba8a655-d69e-44c8-bc6a-607b30e47731" /><div align="center">
-
 # 🖼️ Photo Frame Creator System
 
 **Capstone Project - Online Photo Frame Creation and Management Web Application**
